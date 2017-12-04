@@ -15,8 +15,12 @@ create_passive_tcp_socket(char *ip_address, uint16_t port_number, int backlog);
 
 // Returns a new socket descriptor for the new TCP connection with the connecting host,
 // stops the process execution if something goes wrong
+// TODO: write a version which returns ip address and port number of the client
 int
 safe_accept(int passive_socket);
+
+void
+safe_connect(int socket_des, const char *ip_address, uint16_t port_number);
 
 // First sends the message size as an uint16_t then the message,
 // message must be a C string
