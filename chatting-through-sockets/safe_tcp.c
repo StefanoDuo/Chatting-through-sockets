@@ -1,10 +1,13 @@
 #include "safe_tcp.h"
 
+
+
 int
 create_tcp_socket()
 {
     return create_socket(SOCK_STREAM);
 }
+
 
 
 void
@@ -18,14 +21,16 @@ safe_listen(int socket_des, int backlog)
 }
 
 
+
 int
-create_passive_tcp_socket(char *ip_address, uint16_t port_number, int backlog)
+create_passive_tcp_socket(const char *ip_address, uint16_t port_number, int backlog)
 {
     int socket_des = create_tcp_socket();
     safe_bind(socket_des, ip_address, port_number);
     safe_listen(socket_des, backlog);
     return socket_des;
 }
+
 
 
 int
@@ -40,6 +45,7 @@ safe_accept(int passive_socket)
 }
 
 
+
 void
 safe_connect(int socket_des, const char *ip_address, uint16_t port_number)
 {
@@ -52,11 +58,13 @@ safe_connect(int socket_des, const char *ip_address, uint16_t port_number)
 }
 
 
-void
-safe_send(int socket_des, void *message, uint16_t message_length)
+static void
+safe_send(int socket_des, const void *message, uint16_t message_length)
 {
     uint16_t bytes_sent = 0;
-    // send might send less than length if it blocks and the process receives a signal
+    message = (char *)message;
+    // send might send less than length if it blocks and the process receives
+    // a signal, to avoid sending less than wanted we wrap it into a while
     // https://stackoverflow.com/questions/19697218/can-send-on-a-tcp-socket-return-0-and-length
     while (bytes_sent < message_length) {
         int result = send(socket_des, message, message_length, 0);
@@ -70,34 +78,44 @@ safe_send(int socket_des, void *message, uint16_t message_length)
         // o per errno == EPIPE cioe' quando la connessione viene chiusa con il corretto handshake
         // https://stackoverflow.com/questions/15406097/writing-on-a-tcp-socket-closed-by-the-peer
         bytes_sent += result;
+        message += result;
     }
 }
 
 
+
 void
-tcp_send(int socket_des, void *message)
+tcp_send(int socket_des, const void *message)
 {
-    uint16_t message_length = strlen(message) + 1;
+    uint16_t message_length = strlen(message) + 1;  // we include the terminating null byte
     uint16_t network_message_length = htons(message_length);
     safe_send(socket_des, &network_message_length, sizeof(uint16_t));
     safe_send(socket_des, message, message_length);
 }
 
 
-// returns 0 if the other host has closed the connection
-int
-safe_receive(int socket_des, void *message, uint16_t message_max_length)
+
+// TODO: implement (if needed) another receive() which receives up to
+// message_max_length instead of exactly message_length
+static int
+safe_receive(int socket_des, void *message, uint16_t message_length)
 {
-    int result = recv(socket_des, message, message_max_length, 0);
-    if(result == -1) {
-        perror("Error during recv()");
-        exit(-1);
+    uint16_t bytes_received = 0;
+    message = (char *)message;
+    while (bytes_received < message_length) {
+        int result = recv(socket_des, message, message_length, 0);
+        if (result == -1) {
+            perror("Error during recv()");
+            exit(-1);
+        }
+        bytes_received += result;
+        message += result;
     }
-    return result;
+    return bytes_received;
 }
 
 
-// returns 0 if the other host has closed the connection
+
 int
 tcp_receive(int socket_des, void *message, uint16_t message_max_length)
 {

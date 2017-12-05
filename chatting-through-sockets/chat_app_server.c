@@ -171,10 +171,11 @@ serve_request(int client_socket_des)
     char username[MAX_USERNAME_LENGTH];
     tcp_receive(client_socket_des, message, message_size);
     // https://stackoverflow.com/questions/12120426/how-to-print-uint32-t-and-uint16-t-variables-value
-    // -Wall still gives a warning tho
-    sscanf(message, "%u;%s", &command, username);
+    // https://stackoverflow.com/questions/33675163/what-is-the-correct-and-portable-clang-gcc-modifier-for-uint16-t-in-sscanf
+    // http://en.cppreference.com/w/cpp/types/integer#Format_constants_for_the_std::fscanf_family_of_functions
+    sscanf(message, "%" SCNu16 ";%s", &command, username);
     printf("%s\n", message);
-    printf("%u;%s\n", command, username);
+    printf("%" PRIu16 ";%s\n", command, username);
 
     // TODO: write switch case on command variable
     // switch(command) {

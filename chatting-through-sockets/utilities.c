@@ -1,5 +1,7 @@
 #include "utilities.h"
 
+
+
 bool
 str_to_uint16(const char *str, uint16_t *res)
 {
@@ -11,6 +13,7 @@ str_to_uint16(const char *str, uint16_t *res)
     *res = (uint16_t) val;
     return true;
 }
+
 
 
 uint16_t

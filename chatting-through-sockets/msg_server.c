@@ -1,13 +1,14 @@
 #include "chat_app_server.h"
 #include "utilities.h"
 #include "safe_tcp.h"
-
 #include <sys/select.h>
 #include <stdbool.h>
 #include <inttypes.h>
 
+
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define BACKLOG 8
+
 
 
 void
@@ -18,6 +19,7 @@ check_cli_arguments(int argc, char *argv[])
         exit(-1);
     }
 }
+
 
 
 int
