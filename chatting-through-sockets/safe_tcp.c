@@ -72,6 +72,7 @@ safe_send(int socket_des, const void *message, uint16_t message_length)
             perror("Error during send()");
             exit(-1);
         }
+        printf("Sending either %s or %" PRIu16 "\n", (const char *)message, *(const uint16_t *)message);
         // Decidere se implementare error checking per errno == ECONNRESET
         // cioe' se l'altro host ha deciso di resettare la connessione senza fare
         // il corretto hand shaking ma senza neanche scomparire senza dire niente

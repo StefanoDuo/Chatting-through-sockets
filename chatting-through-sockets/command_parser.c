@@ -9,6 +9,15 @@ static const char delimiter[] = ";";
 
 
 static bool
+check_trailing_stuff(void)
+{
+    char *token = strtok(NULL, delimiter);
+    return token == NULL;
+}
+
+
+
+static bool
 parse_register_command(char *username, char *ip_address, uint16_t *port_number)
 {
     char *token = NULL;
@@ -36,20 +45,32 @@ parse_register_command(char *username, char *ip_address, uint16_t *port_number)
     return token == NULL;
 }
 
-
-
 static bool
 parse_deregister_command(void)
 {
-    // check for trailing stuff
-    char *token = strtok(NULL, delimiter);
-    return token == NULL;
+    return check_trailing_stuff();
+}
+
+
+
+static bool
+parse_who_command(void)
+{
+    return check_trailing_stuff();
+}
+
+
+
+static bool
+parse_quit_command(void)
+{
+    return check_trailing_stuff();
 }
 
 
 
 bool
-parse_message(char *message, uint16_t *command, char *username, char *ip_address, uint16_t *port_number, char *offline_message)
+parse_message(char *message, int16_t *command, char *username, char *ip_address, uint16_t *port_number, char *offline_message)
 {
     char *token = NULL;
 
@@ -64,6 +85,10 @@ parse_message(char *message, uint16_t *command, char *username, char *ip_address
     switch(*command) {
         case REGISTER:
             return parse_register_command(username, ip_address, port_number);
+        case WHO:
+            return parse_who_command();
+        case QUIT:
+            return parse_quit_command();
         case DEREGISTER:
             return parse_deregister_command();
         default:

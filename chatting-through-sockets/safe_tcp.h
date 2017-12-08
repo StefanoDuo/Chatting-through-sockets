@@ -4,6 +4,7 @@
 
 #include "safe_socket.h"
 #include <stdbool.h>
+#include <inttypes.h>
 
 
 
