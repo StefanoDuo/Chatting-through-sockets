@@ -203,21 +203,23 @@ is_offline_storage_full(void)
 void
 register_client_as(int client_socket_des, const char *username, const char *ip_address, uint16_t port_number)
 {
-    if (is_username_register_full()) {
-        tcp_send(client_socket_des, "0;Register is full");
-        return;
-    }
-
     // TODO: decide whether to remove or not (client alredy registered)
     // we can move this check on the client side (less secure but easier)
-    int index = get_client_index(client_socket_des);
+    int16_t index = get_client_index(client_socket_des);
     if (index != -1) {
         tcp_send(client_socket_des, "0;You are alredy registered");
         return;
     }
 
-    // if the username is alredy registered we can reregister only if it is offline
     index = get_username_index(username);
+    // when the register is full we need to check if it's a registration of an existing
+    // username or a new one
+    if (index == -1 && is_username_register_full()) {
+        tcp_send(client_socket_des, "0;Register is full");
+        return;
+    }
+
+    // if the username is alredy registered we can reregister only if it is offline
     if (index >= 0 && is_entry_online(index)) {
         tcp_send(client_socket_des, "0;Username alredy in use");
         return;
