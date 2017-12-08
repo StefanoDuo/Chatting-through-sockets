@@ -40,9 +40,7 @@ parse_register_command(char *username, char *ip_address, uint16_t *port_number)
         return false;
     sscanf(token, "%" SCNu16, port_number);
 
-    // check for trailing stuff
-    token = strtok(NULL, delimiter);
-    return token == NULL;
+    return check_trailing_stuff();
 }
 
 static bool
@@ -64,6 +62,22 @@ parse_who_command(void)
 static bool
 parse_quit_command(void)
 {
+    return check_trailing_stuff();
+}
+
+
+
+static bool
+parse_resolve_name_command(char * username)
+{
+    char *token = NULL;
+
+    // parse username
+    token = strtok(NULL, delimiter);
+    if (token == NULL)
+        return false;
+    strcpy(username, token);
+
     return check_trailing_stuff();
 }
 
@@ -91,6 +105,8 @@ parse_message(char *message, int16_t *command, char *username, char *ip_address,
             return parse_quit_command();
         case DEREGISTER:
             return parse_deregister_command();
+        case RESOLVE_NAME:
+            return parse_resolve_name_command(username);
         default:
             return false;
     }

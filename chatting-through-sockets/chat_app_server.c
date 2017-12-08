@@ -49,7 +49,7 @@ static int stored_messages = 0;
 
 
 static inline bool
-is_entry_in_use(int16_t index)
+is_index_in_use(int16_t index)
 {
     return reg_clients[index].is_in_use;
 }
@@ -57,7 +57,7 @@ is_entry_in_use(int16_t index)
 
 
 static inline bool
-is_entry_online(int index)
+is_index_online(int index)
 {
     // return reg_clients[index].socket_des == -1;
     return reg_clients[index].is_online;
@@ -74,11 +74,11 @@ is_username_register_full(void)
 
 
 // Returns the username index inside of the register, -1 if username doesn't exists
-static int
+static int16_t
 get_username_index(const char *username)
 {
     for (int16_t i = 0; i < curr_reg_clients; ++i) {
-        if (strcmp(reg_clients[i].username, username) == 0 && is_entry_in_use(i))
+        if (strcmp(reg_clients[i].username, username) == 0 && is_index_in_use(i))
             return i;
     }
     return -1;
@@ -87,11 +87,11 @@ get_username_index(const char *username)
 
 
 static int16_t
-get_reg_user_number(void)
+get_registered_users_number(void)
 {
     int16_t how_many = 0;
     for (int16_t i = 0; i < curr_reg_clients; ++i) {
-        if(is_entry_in_use(i))
+        if(is_index_in_use(i))
             ++how_many;
     }
 
@@ -101,11 +101,11 @@ get_reg_user_number(void)
 
 
 // Returns the client register index, -1 if the client isn't registered
-static int
+static int16_t
 get_client_index(int client_socket_des)
 {
     for (int16_t i = 0; i < curr_reg_clients; ++i) {
-        if (reg_clients[i].socket_des == client_socket_des && is_entry_in_use(i) && is_entry_online(i))
+        if (reg_clients[i].socket_des == client_socket_des && is_index_in_use(i) && is_index_online(i))
             return i;
     }
 
@@ -116,7 +116,7 @@ get_client_index(int client_socket_des)
 
 // If return value is >= 0 username will contain the client associated username (through registration)
 // returns -1 if the specified client isn't registered
-static int
+static int16_t
 get_client_username(int client_socket_des, char *username)
 {
     int16_t index = get_client_index(client_socket_des);
@@ -129,12 +129,15 @@ get_client_username(int client_socket_des, char *username)
 
 
 
-static int
+static int16_t
 get_ip_and_port_from_username(const char *username, char *ip_address, uint16_t *port_number)
 {
     int16_t index = get_username_index(username);
     if (index == -1)
         return -1;
+
+    if (!is_index_online(index))
+        return -2;
 
     strcpy(ip_address, reg_clients[index].ip_address);
     *port_number = reg_clients[index].port_number;
@@ -163,10 +166,6 @@ insert_username_registration(int16_t index, const char *username, const char *ip
 static void
 remove_index_registration(int16_t index)
 {
-    // strcpy(reg_clients[index].username, "");
-    // strcpy(reg_clients[index].ip_address, "");
-    // reg_clients[index].port_number = -1;
-    // reg_clients[index].socket_des = -1;
     reg_clients[index].is_in_use = false;
 }
 
@@ -220,7 +219,7 @@ register_client_as(int client_socket_des, const char *username, const char *ip_a
     }
 
     // if the username is alredy registered we can reregister only if it is offline
-    if (index >= 0 && is_entry_online(index)) {
+    if (index >= 0 && is_index_online(index)) {
         tcp_send(client_socket_des, "0;Username alredy in use");
         return;
     }
@@ -269,12 +268,12 @@ void
 send_registered_users(int client_socket_des)
 {
     char buffer[MAX_MESSAGE_LENGTH];
-    int16_t how_many = get_reg_user_number();
+    int16_t how_many = get_registered_users_number();
     sprintf(buffer, "%" SCNu16, how_many);
     tcp_send(client_socket_des, buffer);
     for (int16_t i = 0; i < curr_reg_clients; ++i) {
-        if (is_entry_in_use(i)) {
-            sprintf(buffer, "%s;%" SCNu16, reg_clients[i].username, is_entry_online(i));
+        if (is_index_in_use(i)) {
+            sprintf(buffer, "%s;%" SCNu16, reg_clients[i].username, is_index_online(i));
             tcp_send(client_socket_des, buffer);
         }
     }
@@ -354,6 +353,30 @@ retrieve_offline_message(int client_socket_des, char *requesting_username)
 
 
 
+static void
+resolve_name(int client_socket_des, const char *username)
+{
+    char ip_address[INET_ADDRSTRLEN];
+    uint16_t port_number;
+    int16_t index = get_ip_and_port_from_username(username, ip_address, &port_number);
+
+    if (index == -1) {
+        tcp_send(client_socket_des, "0;Username not found");
+        return;
+    }
+    if (index == -2) {
+        tcp_send(client_socket_des, "0;Username not online");
+        return;
+    }
+    
+
+    char message[MAX_MESSAGE_LENGTH];
+    sprintf(message, "1;%s;%" PRIu16, ip_address, port_number);
+    tcp_send(client_socket_des, message);
+}
+
+
+
 bool
 serve_request(int client_socket_des)
 {
@@ -386,21 +409,25 @@ serve_request(int client_socket_des)
 
     switch(command) {
         case REGISTER:
-            printf("!register request\n");
+            printf("REGISTER request\n");
             register_client_as(client_socket_des, username, ip_address, port_number);
             break;
         case WHO:
-            printf("!who request\n");
+            printf("WHO request\n");
             send_registered_users(client_socket_des);
             break;
         case QUIT:
-            printf("!quit request\n");
+            printf("QUIT request\n");
             set_client_offline(client_socket_des);
             is_conn_open = false;
             break;
         case DEREGISTER:
-            printf("!deregister request\n");
+            printf("DEREGISTER request\n");
             deregister_client(client_socket_des);
+            break;
+        case RESOLVE_NAME:
+            printf("RESOLVE_NAME request\n");
+            resolve_name(client_socket_des, username);
             break;
         default:
             // TODO: should we handle an unknown command case?

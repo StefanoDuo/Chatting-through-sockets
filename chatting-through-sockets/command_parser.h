@@ -13,6 +13,7 @@
 #define QUIT 2
 #define DEREGISTER 3
 #define SEND 4
+#define RESOLVE_NAME 5
 
 
 
