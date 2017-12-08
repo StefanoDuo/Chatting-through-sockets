@@ -1,10 +1,15 @@
 #include "chat_app_server.h"
+#include "command_parser.h"
 
 
 
 #define MAX_USERNAME_LENGTH 36
 #define MAX_REGISTERED_CLIENTS 128
 #define MAX_OFFLINE_MESSAGES 256
+
+#define COMMAND_MAX_LENGTH 5
+#define PORT_NUMBER_MAX_LENGTH 5
+#define DELIMITER_LENGTH 1
 
 
 
@@ -42,7 +47,7 @@ static int stored_messages = 0;
 
 
 static inline int
-is_username_register_full()
+is_username_register_full(void)
 {
     return curr_reg_clients == MAX_REGISTERED_CLIENTS;
 }
@@ -117,7 +122,7 @@ get_ip_and_port_from_username(const char *username, char *ip_address, uint16_t *
 
 
 static void
-insert_username_registration(int index, char *username, char *ip_address, uint16_t port_number, int client_socket_des)
+insert_username_registration(int index, const char *username, const char *ip_address, uint16_t port_number, int client_socket_des)
 {
     if (index == -1) {
         index = curr_reg_clients;
@@ -149,7 +154,7 @@ remove_username_registration(int index)
 
 
 static inline int
-is_offline_storage_full()
+is_offline_storage_full(void)
 {
     return stored_messages == MAX_OFFLINE_MESSAGES;
 }
@@ -162,96 +167,114 @@ is_offline_storage_full()
 
 
 
-int
+bool
 serve_request(int client_socket_des)
 {
-    char message[128];
-    uint16_t message_size = 128;
+    // General request format: "command;username;ip_address;port_number\0"
+    const uint16_t max_message_size = COMMAND_MAX_LENGTH + DELIMITER_LENGTH + MAX_USERNAME_LENGTH
+        + DELIMITER_LENGTH + INET_ADDRSTRLEN + DELIMITER_LENGTH + PORT_NUMBER_MAX_LENGTH + 1;
+    char *message = malloc(max_message_size);
+    if (message == NULL) {
+        printf("Out of memory\n");
+        exit(-1);
+    }
+
     uint16_t command;
+    uint16_t port_number;
+    char ip_address[INET_ADDRSTRLEN];
     char username[MAX_USERNAME_LENGTH];
-    tcp_receive(client_socket_des, message, message_size);
-    // https://stackoverflow.com/questions/12120426/how-to-print-uint32-t-and-uint16-t-variables-value
-    // https://stackoverflow.com/questions/33675163/what-is-the-correct-and-portable-clang-gcc-modifier-for-uint16-t-in-sscanf
-    // http://en.cppreference.com/w/cpp/types/integer#Format_constants_for_the_std::fscanf_family_of_functions
-    sscanf(message, "%" SCNu16 ";%s", &command, username);
-    printf("%s\n", message);
-    printf("%" PRIu16 ";%s\n", command, username);
+    char offline_message[MAX_MESSAGE_LENGTH];
 
-    // TODO: write switch case on command variable
-    // switch(command) {
-    //     case 0:
+    bool is_conn_open = tcp_receive(client_socket_des, message, message_size);
+    if (!is_conn_open) {
+        goto stop;
+    }
 
-    //         break;
-    //     case 1:
-    //         break;
-    // }
-    return -1;
+    bool success = parse_message(message, &command, username, ip_address, &port_number, offline_message);
+    if (!success)
+        goto stop;
+
+    switch(command) {
+        case REGISTER:
+            register_client_as(client_socket_des, username, ip_address, port_number);
+            break;
+        case DEREGISTER:
+            deregister_client(client_socket_des);
+            break;
+        default:
+            // TODO: should we handle an unknown command case?
+            break;
+    }
+
+stop:
+    free(message);
+    return is_conn_open;
 }
 
 
 
-int
-register_client_as(int client_socket_des, char *username, char *ip_address, uint16_t port_number)
+void
+register_client_as(int client_socket_des, const char *username, const char *ip_address, uint16_t port_number)
 {
     if (is_username_register_full()) {
-        // TODO: handle full register
-        return -1;
+        tcp_send(client_socket_des, "0;Register is full");
+        return;
     }
 
-    // TODO: decide whether to remove or not
+    // TODO: decide whether to remove or not (client alredy registered)
     // we can probably move this check on the client side (less secure but easier)
     int index = get_client_index(client_socket_des);
     if (index != -1) {
-        // TODO: handle client alredy registered
-        return -1;
+        tcp_send(client_socket_des, "0;You are alredy registered");
     }
 
     index = get_username_index(username);
     if (index >= 0 && is_username_online(index)) {
-        // TODO: handle username alredy online
-        return -1;
+        tcp_send(client_socket_des, "0;Username alredy in use");
     }
 
     insert_username_registration(index, username, ip_address, port_number, client_socket_des);
-    // TODO: send success message to client
-    return 0;
+    tcp_send(client_socket_des, "1;Success");
 }
 
 
 
-int
+void
 deregister_client(int client_socket_des)
 {
+    // TODO: decide whether to remove or not (client alredy registered)
     // we can probably move this check on the client side (less secure but easier)
     int index = get_client_index(client_socket_des);
     if (index == -1) {
-        // TODO: handle deregister request from non registered client
-        // (comunicate unsuccess to the client)
-        return -1;
+        tcp_send(client_socket_des, "0;You are not registered");
     }
 
     remove_username_registration(index);
-    // TODO: send success message to client
-    return -1;
+    tcp_send(client_socket_des, "1;Success");
 }
 
 
 
-int
+void
 send_registered_users(int client_socket_des)
 {
-    return -1;
+
 }
 
 
 
-int
+void
 store_offline_message(int client_socket_des)
 {
     // TODO: check if full
     // TODO: check if nicknames exists
     uint16_t message_max_size = MAX_USERNAME_LENGTH + MAX_MESSAGE_LENGTH + 1;
     char *message = malloc(message_max_size);
+    if (message == NULL) {
+        printf("Out of memory\n");
+        exit(-1);
+    }
+
     char *buffer;
 
     tcp_receive(client_socket_des, message, message_max_size);
@@ -275,15 +298,18 @@ store_offline_message(int client_socket_des)
 
     strcpy(offline_messages[stored_messages].sender_username, sender_username);
     ++stored_messages;
-    return 0;
 }
 
 
 
-int
+void
 retrieve_offline_message(int client_socket_des, char *requesting_username)
 {
     char *response = malloc(MAX_USERNAME_LENGTH + MAX_MESSAGE_LENGTH + 1);
+    if (response == NULL) {
+        printf("Out of memory\n");
+        exit(-1);
+    }
     // First we calculate and tell the client how many offline messages he has received
     int how_many = 0;
     for (int i = 0; i < stored_messages; ++i) {
@@ -303,6 +329,6 @@ retrieve_offline_message(int client_socket_des, char *requesting_username)
             tcp_send(client_socket_des, response);
         }
     }
+
     free(response);
-    return 0;
 }

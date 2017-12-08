@@ -1,12 +1,12 @@
 #include "chat_app_server.h"
-#include "utilities.h"
 #include "safe_tcp.h"
+#include "utilities.h"
 #include <sys/select.h>
 #include <stdbool.h>
 #include <inttypes.h>
 
 
-#define MAX(a, b) ((a) > (b) ? (a) : (b))
+
 #define BACKLOG 8
 
 
@@ -28,7 +28,7 @@ main(int argc, char *argv[])
     check_cli_arguments(argc, argv);
     uint16_t port_number = get_port_number(argv[1]);
     int server_socket = create_passive_tcp_socket(NULL, port_number, BACKLOG);
-    printf("Listening for incoming connections on port number %u\n", port_number);
+    printf("Listening for incoming connections on :%u\n\n", port_number);
 
     int max_des = server_socket;
     fd_set read_master;
@@ -38,8 +38,9 @@ main(int argc, char *argv[])
     for (;;) {
         fd_set read_worker = read_master;
         int client_socket;
+        printf("Calling safe_select()\n");
         safe_select(max_des + 1, &read_worker);
-        printf("Something happened ...\n");
+        printf("Woke up from safe_select()\n");
         for (int i = 0; i <= max_des; ++i) {
             if (FD_ISSET(i, &read_worker)) {
                 if (i == server_socket) {
@@ -51,12 +52,14 @@ main(int argc, char *argv[])
                 } else {
                     // An alredy connected client is requesting something
                     printf("Handling a request from a connected client\n");
-                    bool is_conn_closed = serve_request(i);
-                    if (is_conn_closed) {
+                    bool is_conn_open = serve_request(i);
+                    if (!is_conn_open) {
+                        printf("Connection closed by the client\n");
                         FD_CLR(i, &read_master);
                         safe_close(i);
                     }
                 }
+                printf("\n");
             }
         }
     }

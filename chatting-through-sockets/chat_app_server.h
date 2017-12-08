@@ -3,6 +3,7 @@
 
 #include <string.h>
 #include <inttypes.h>
+#include <stdbool.h>
 #include "safe_socket.h"
 #include "safe_tcp.h"
 
@@ -12,32 +13,38 @@
 
 
 
-int
-register_client_as(int client_socket_des, char *username, char *ip_address, uint16_t port_number);
+// client_socket_des is used as a client_id in all the functions
+// TODO: decide if show only server_request() as the app interface
+// TODO: move all the includes in every .h file inside the .c file
 
 
 
-int
+void
+register_client_as(int client_socket_des, const char *username, const char *ip_address, uint16_t port_number);
+
+
+
+void
 deregister_client(int client_socket_des);
 
 
 
-int
+void
 send_registered_users(int client_socket_des);
 
 
 
-int
+void
 store_offline_message(int client_socket_des);
 
 
 
-int
+void
 retrieve_offline_message(int client_socket_des, char *requesting_username);
 
 
 
-int
+bool
 serve_request(int client_socket_des);
 
 

@@ -3,7 +3,7 @@
 
 
 int
-create_tcp_socket()
+create_tcp_socket(void)
 {
     return create_socket(SOCK_STREAM);
 }
@@ -62,12 +62,12 @@ static void
 safe_send(int socket_des, const void *message, uint16_t message_length)
 {
     uint16_t bytes_sent = 0;
-    message = (char *)message;
     // send might send less than length if it blocks and the process receives
     // a signal, to avoid sending less than wanted we wrap it into a while
     // https://stackoverflow.com/questions/19697218/can-send-on-a-tcp-socket-return-0-and-length
     while (bytes_sent < message_length) {
         int result = send(socket_des, message, message_length, 0);
+        // TODO: add signal handler for SIGPIPE signal, received when we send on a closed pipe
         if (result < 0) {
             perror("Error during send()");
             exit(-1);
@@ -85,7 +85,7 @@ safe_send(int socket_des, const void *message, uint16_t message_length)
 
 
 void
-tcp_send(int socket_des, const void *message)
+tcp_send(int socket_des, const char *message)
 {
     uint16_t message_length = strlen(message) + 1;  // we include the terminating null byte
     uint16_t network_message_length = htons(message_length);
@@ -95,19 +95,18 @@ tcp_send(int socket_des, const void *message)
 
 
 
-// TODO: implement (if needed) another receive() which receives up to
-// message_max_length instead of exactly message_length
-static int
+static bool
 safe_receive(int socket_des, void *message, uint16_t message_length)
 {
     uint16_t bytes_received = 0;
-    message = (char *)message;
     while (bytes_received < message_length) {
         int result = recv(socket_des, message, message_length, 0);
         if (result == -1) {
             perror("Error during recv()");
             exit(-1);
         }
+        if (result == 0)
+            return false;
         bytes_received += result;
         message += result;
     }
@@ -116,13 +115,13 @@ safe_receive(int socket_des, void *message, uint16_t message_length)
 
 
 
-int
-tcp_receive(int socket_des, void *message, uint16_t message_max_length)
+bool
+tcp_receive(int socket_des, char *message, uint16_t message_max_length)
 {
     uint16_t network_message_length = 0;
-    int result = safe_receive(socket_des, &network_message_length, sizeof(uint16_t));
-    if (result == 0)
-        return result;
+    bool is_conn_open = safe_receive(socket_des, &network_message_length, sizeof(uint16_t));
+    if (!is_conn_open)
+        return false;
 
     uint16_t host_message_length = ntohs(network_message_length);
     if (host_message_length > message_max_length) {
