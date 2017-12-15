@@ -1,4 +1,4 @@
-#include "command_parser.h"
+#include "server_command_parser.h"
 #include "commands_format.h"
 
 #include <string.h>
@@ -6,14 +6,10 @@
 
 
 
-static const char delimiter[] = ";";
-
-
-
 static bool
 check_trailing_stuff(void)
 {
-    char *token = strtok(NULL, delimiter);
+    char *token = strtok(NULL, DELIMITER);
     return token == NULL;
 }
 
@@ -25,19 +21,19 @@ parse_register_command(char *username, char *ip_address, uint16_t *port_number)
     char *token = NULL;
 
     // parse username
-    token = strtok(NULL, delimiter);
+    token = strtok(NULL, DELIMITER);
     if (token == NULL)
         return false;
     strcpy(username, token);
 
     // parse ip_address
-    token = strtok(NULL, delimiter);
+    token = strtok(NULL, DELIMITER);
     if (token == NULL)
         return false;
     strcpy(ip_address, token);
 
     // parse port_number
-    token = strtok(NULL, delimiter);
+    token = strtok(NULL, DELIMITER);
     if (token == NULL)
         return false;
     sscanf(token, "%" SCNu16, port_number);
@@ -75,7 +71,7 @@ parse_resolve_name_command(char * username)
     char *token = NULL;
 
     // parse username
-    token = strtok(NULL, delimiter);
+    token = strtok(NULL, DELIMITER);
     if (token == NULL)
         return false;
     strcpy(username, token);
@@ -88,9 +84,7 @@ parse_resolve_name_command(char * username)
 bool
 parse_message(char *message, int16_t *command, char *username, char *ip_address, uint16_t *port_number, char *offline_message)
 {
-    char *token = NULL;
-
-    token = strtok(message, delimiter);
+    char *token = strtok(message, DELIMITER);
     if (token == NULL)
         return false;
     // https://stackoverflow.com/questions/12120426/how-to-print-uint32-t-and-uint16-t-variables-value
@@ -110,4 +104,6 @@ parse_message(char *message, int16_t *command, char *username, char *ip_address,
         case RESOLVE_NAME:
             return parse_resolve_name_command(username);
     }
+    
+    return false;
 }

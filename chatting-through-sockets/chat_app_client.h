@@ -3,8 +3,17 @@
 
 
 
+#include <inttypes.h>
+
+
+
 void
-execute_command(int server_conn_sd, const char* command);
+set_ip_and_port(const char *ip, uint16_t port);
+
+
+
+void
+execute_command(int server_conn_sd, char* command);
 
 
 

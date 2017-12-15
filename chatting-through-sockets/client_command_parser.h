@@ -9,7 +9,7 @@
 
 
 bool
-parse_command(const char* str, int16_t *command, char *username);
+parse_command(char * str, int16_t *command, char *username);
 
 
 

@@ -3,11 +3,14 @@
 #include "safe_socket.h"
 #include "safe_tcp.h"
 #include "chat_app_sizes.h"
+#include "commands_format.h"
 
 #include <string.h>
 #include <unistd.h>
 #include <stdio.h>
 #include <inttypes.h>
+#include <arpa/inet.h>
+#include <stdlib.h>
 
 
 
@@ -16,7 +19,7 @@
 
 
 
-static struct client {
+struct client {
     bool is_in_use;
     bool is_online;
     char username[MAX_USERNAME_LENGTH];
@@ -27,7 +30,7 @@ static struct client {
 
 
 
-static struct offline_message {
+struct offline_message {
     char message[MAX_MESSAGE_LENGTH];
     char sender_username[MAX_USERNAME_LENGTH];
     char receiver_username[MAX_USERNAME_LENGTH];
@@ -231,6 +234,9 @@ register_client_as(int client_socket_des, const char *username, const char *ip_a
     }
 
     bool success = insert_username_registration(index, username, ip_address, port_number, client_socket_des);
+    if (!success) {
+    	tcp_send(client_socket_des, "0;Register full");
+    }
     tcp_send(client_socket_des, "1;Success");
 }
 
@@ -241,9 +247,6 @@ set_client_offline(int client_socket_des)
 {
     // we don't send anything back because we expect the client to close the connection after
     // sending that request
-
-    // TODO: decide whether to remove or not (client not registered)
-    // we can probably move this check on the client side (less secure but easier)
     int16_t index = get_client_index(client_socket_des);
     if (index == -1)
         return;
@@ -259,13 +262,13 @@ deregister_client(int client_socket_des)
     // TODO: decide whether to remove or not (client not registered)
     // we can probably move this check on the client side (less secure but easier)
     int index = get_client_index(client_socket_des);
-    if (index == -1) {
-        tcp_send(client_socket_des, "0;You are not registered");
-        return;
-    }
+    //if (index == -1) {
+    //    tcp_send(client_socket_des, "0;You are not registered");
+    //    return;
+    //}
 
     remove_index_registration(index);
-    tcp_send(client_socket_des, "1;Success");
+    //tcp_send(client_socket_des, "1;Success");
 }
 
 
@@ -275,7 +278,7 @@ send_registered_users(int client_socket_des)
 {
     char buffer[MAX_MESSAGE_LENGTH];
     int16_t how_many = get_registered_users_number();
-    sprintf(buffer, "%" SCNu16, how_many);
+    sprintf(buffer, "%" SCNd16, how_many);
     tcp_send(client_socket_des, buffer);
     for (int16_t i = 0; i < curr_reg_clients; ++i) {
         if (is_index_in_use(i)) {
@@ -399,7 +402,6 @@ serve_request(int client_socket_des)
     char ip_address[INET_ADDRSTRLEN];
     char username[MAX_USERNAME_LENGTH];
     char offline_message[MAX_MESSAGE_LENGTH];
-
     bool is_conn_open = tcp_receive(client_socket_des, message, max_message_size);
     if (!is_conn_open) {
         goto stop;

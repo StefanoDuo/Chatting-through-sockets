@@ -87,12 +87,12 @@ match_command(const char *command)
 
 
 bool
-parse_command(const char* str, int16_t *command, char *username)
+parse_command(char *str, int16_t *command, char *username)
 {
     char *token = NULL;
 
     // parse command
-    token = strtok(command, delimiter);
+    token = strtok(str, delimiter);
     if (token == NULL)
         return false;
 
@@ -109,5 +109,5 @@ parse_command(const char* str, int16_t *command, char *username)
         case SEND:
             return parse_send(username);
     }
-    return true;
+    return false;
 }

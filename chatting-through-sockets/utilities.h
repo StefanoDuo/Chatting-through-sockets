@@ -22,4 +22,9 @@ get_port_number(const char *str);
 
 
 
+void
+set_sigpipe_handler();
+
+
+
 #endif

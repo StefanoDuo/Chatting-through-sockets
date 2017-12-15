@@ -8,6 +8,7 @@
 #include <inttypes.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <sys/select.h>
 
 
 
@@ -29,8 +30,10 @@ check_cli_arguments(int argc, char *argv[])
 int
 main(int argc, char *argv[])
 {
-    check_cli_arguments(argc, argv);
-    uint16_t port_number = get_port_number(argv[1]);
+    //check_cli_arguments(argc, argv);
+    set_sigpipe_handler();
+    //uint16_t port_number = get_port_number(argv[1]);
+    uint16_t port_number = 8080;
     int server_socket = create_passive_tcp_socket(NULL, port_number, BACKLOG);
     printf("Listening for incoming connections on :%u\n\n", port_number);
 
@@ -42,9 +45,9 @@ main(int argc, char *argv[])
     for (;;) {
         fd_set read_worker = read_master;
         int client_socket;
-        printf("Calling safe_select()\n");
+        //printf("Calling safe_select()\n");
         safe_select(max_des + 1, &read_worker);
-        printf("Woke up from safe_select()\n");
+        //printf("Woke up from safe_select()\n");
         for (int i = 0; i <= max_des; ++i) {
             if (FD_ISSET(i, &read_worker)) {
                 if (i == server_socket) {
@@ -55,7 +58,7 @@ main(int argc, char *argv[])
                     max_des = MAX(max_des, client_socket);
                 } else {
                     // An alredy connected client is requesting something
-                    printf("Handling a request from a connected client\n");
+                    //printf("Handling a request from a connected client\n");
                     bool is_conn_open = serve_request(i);
                     if (!is_conn_open) {
                         printf("Connection closed by the client\n");
