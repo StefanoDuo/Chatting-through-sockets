@@ -1,4 +1,6 @@
 #include "command_parser.h"
+#include "commands_format.h"
+
 #include <string.h>
 #include <stdio.h>
 
@@ -107,7 +109,5 @@ parse_message(char *message, int16_t *command, char *username, char *ip_address,
             return parse_deregister_command();
         case RESOLVE_NAME:
             return parse_resolve_name_command(username);
-        default:
-            return false;
     }
 }

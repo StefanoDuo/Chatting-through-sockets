@@ -1,14 +1,9 @@
 #ifndef SAFE_SOCKET_H
 #define SAFE_SOCKET_H
 
-#include <sys/socket.h>
-#include <arpa/inet.h>
-#include <errno.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <sys/select.h>
+
+
+#include <inttypes.h>
 
 
 

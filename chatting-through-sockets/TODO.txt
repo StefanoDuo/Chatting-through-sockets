@@ -1,0 +1,7 @@
+1. move every size which regards the app to chat_app_sizes.h
+2. define a struct for every client-server message protocol composition, this way we can declare buffer with sizeof(struct referring to that type of message)
+3. call a function get_entry() to get an entry for a register request, that way it's easy to change how we search for a free entry
+4. decide if we need to define macros for error messages
+5. add tcp_receive in every client request
+6. swap everything except port number to int16_t and change SCN e PRN accordingly
+7. check if Makefile works

@@ -15,12 +15,6 @@
 
 
 
-// If returns true *res will contain the conversion of str to uint16_t
-bool
-str_to_uint16(const char *str, uint16_t *res);
-
-
-
 // Returns the conversion of str to uint16_t
 // stops process execution if an error occurs during the conversion
 uint16_t

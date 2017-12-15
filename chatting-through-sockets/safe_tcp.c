@@ -1,4 +1,8 @@
 #include "safe_tcp.h"
+#include "safe_socket.h"
+
+#include <stdio.h>
+#include <unistd.h>
 
 
 

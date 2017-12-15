@@ -1,9 +1,13 @@
 #include "chat_app_server.h"
 #include "safe_tcp.h"
+#include "safe_socket.h"
 #include "utilities.h"
-#include <sys/select.h>
+
+
 #include <stdbool.h>
 #include <inttypes.h>
+#include <stdio.h>
+#include <unistd.h>
 
 
 
@@ -33,7 +37,7 @@ main(int argc, char *argv[])
     int max_des = server_socket;
     fd_set read_master;
     FD_ZERO(&read_master);
-    FD_SET(server_socket, &read_master);
+    FD_SET(max_des, &read_master);
 
     for (;;) {
         fd_set read_worker = read_master;

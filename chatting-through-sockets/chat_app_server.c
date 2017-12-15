@@ -1,15 +1,18 @@
 #include "chat_app_server.h"
-#include "command_parser.h"
+#include "server_command_parser.h"
+#include "safe_socket.h"
+#include "safe_tcp.h"
+#include "chat_app_sizes.h"
+
+#include <string.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <inttypes.h>
 
 
 
-#define MAX_USERNAME_LENGTH 36
 #define MAX_REGISTERED_CLIENTS 128
 #define MAX_OFFLINE_MESSAGES 256
-
-#define COMMAND_MAX_LENGTH 5
-#define PORT_NUMBER_MAX_LENGTH 5
-#define DELIMITER_LENGTH 1
 
 
 
@@ -145,13 +148,22 @@ get_ip_and_port_from_username(const char *username, char *ip_address, uint16_t *
 }
 
 
+static int16_t
+get_available_index()
+{
+    if (is_username_register_full())
+        return -1;
+    return curr_reg_clients++;
+}
 
-static void
+
+static bool
 insert_username_registration(int16_t index, const char *username, const char *ip_address, uint16_t port_number, int client_socket_des)
 {
     if (index == -1) {
-        index = curr_reg_clients;
-        ++curr_reg_clients;
+        index = get_available_index();
+        if (index == -1)
+            return false;
     }
     strcpy(reg_clients[index].username, username);
     strcpy(reg_clients[index].ip_address, ip_address);
@@ -159,6 +171,7 @@ insert_username_registration(int16_t index, const char *username, const char *ip
     reg_clients[index].socket_des = client_socket_des;
     reg_clients[index].is_in_use = true;
     reg_clients[index].is_online = true;
+    return true;
 }
 
 
@@ -211,20 +224,13 @@ register_client_as(int client_socket_des, const char *username, const char *ip_a
     }
 
     index = get_username_index(username);
-    // when the register is full we need to check if it's a registration of an existing
-    // username or a new one
-    if (index == -1 && is_username_register_full()) {
-        tcp_send(client_socket_des, "0;Register is full");
-        return;
-    }
-
     // if the username is alredy registered we can reregister only if it is offline
     if (index >= 0 && is_index_online(index)) {
         tcp_send(client_socket_des, "0;Username alredy in use");
         return;
     }
 
-    insert_username_registration(index, username, ip_address, port_number, client_socket_des);
+    bool success = insert_username_registration(index, username, ip_address, port_number, client_socket_des);
     tcp_send(client_socket_des, "1;Success");
 }
 
@@ -368,7 +374,6 @@ resolve_name(int client_socket_des, const char *username)
         tcp_send(client_socket_des, "0;Username not online");
         return;
     }
-    
 
     char message[MAX_MESSAGE_LENGTH];
     sprintf(message, "1;%s;%" PRIu16, ip_address, port_number);
@@ -428,9 +433,6 @@ serve_request(int client_socket_des)
         case RESOLVE_NAME:
             printf("RESOLVE_NAME request\n");
             resolve_name(client_socket_des, username);
-            break;
-        default:
-            // TODO: should we handle an unknown command case?
             break;
     }
 
