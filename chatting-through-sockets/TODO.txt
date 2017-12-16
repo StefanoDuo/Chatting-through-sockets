@@ -4,4 +4,3 @@
 4. decide if we need to define macros for error messages
 5. add tcp_receive in every client request
 6. swap everything except port number to int16_t and change SCN e PRN accordingly
-7. check if Makefile works
