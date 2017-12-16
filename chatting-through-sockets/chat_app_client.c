@@ -129,6 +129,14 @@ execute_send(int server_conn_sd, const char *username)
 		return;
 	}
 	
+	// parse message
+	bool parsing_completed = parse_message(message, sizeof(message));
+	if (!parsing_completed) {
+		printf("Message too log. Max message size: %" PRId16 "\n", MAX_MESSAGE_LENGTH);
+		return;
+	}
+	printf("\n\nMESSAGE_TO_SEND: %s", message);
+	
 	if (result_code == USERNAME_NOT_ONLINE) {
 		// TODO: implement offline message
 		printf("Offline message to be implemented\n");

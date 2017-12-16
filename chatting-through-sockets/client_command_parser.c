@@ -2,6 +2,7 @@
 #include "commands_format.h"
 
 #include <string.h>
+#include <stdio.h>
 
 
 
@@ -123,3 +124,53 @@ parse_command(char *str, int16_t *command, char *username)
     }
     return false;
 }
+
+
+
+bool
+parse_message(char *str, uint16_t max_size)
+{
+	uint16_t current_size = 0;	
+	do {
+		// fgets reads max_size - current_size - 1 characters at most
+		// therefore when we only have 1 byte of space left in str
+		// it doesn't read anything, to handle that case we exit from the while
+		// and read an auxiliary buffer to check if the user wrote "./n"
+		fgets(str, max_size - current_size, stdin);
+		if (strcmp(str, ".\n") == 0) {
+			*str = '\0';
+			return true;
+		}
+		current_size += strlen(str);
+		str += strlen(str);
+	} while (current_size < max_size - 1);
+	
+	if (max_size - current_size == 1) {
+		// we have read a message of max_size, now we need to check if the user
+		// wrote "./n" to end the message
+		char buffer[3];
+		fgets(buffer, sizeof(buffer), stdin);
+		if (strcmp(buffer, ".\n") == 0) {
+			*str = '\0';
+			return true;
+		}
+	}
+	
+	return false;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

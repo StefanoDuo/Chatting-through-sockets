@@ -5,7 +5,7 @@
 
 // TODO: define here every size used by the application
 #define MAX_MESSAGE_LENGTH 256
-#define MAX_USERNAME_LENGTH 36
+#define MAX_USERNAME_LENGTH 32
 
 
 
