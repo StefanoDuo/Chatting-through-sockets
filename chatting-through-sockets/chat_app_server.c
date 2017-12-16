@@ -282,7 +282,11 @@ send_registered_users(int client_socket_des)
     tcp_send(client_socket_des, buffer);
     for (int16_t i = 0; i < curr_reg_clients; ++i) {
         if (is_index_in_use(i)) {
-            sprintf(buffer, "%s;%" SCNu16, reg_clients[i].username, is_index_online(i));
+        	
+            sprintf(buffer,
+            		"%s(%s)",
+            		reg_clients[i].username,
+            		(is_index_online(i) ? "online" : "offline"));
             tcp_send(client_socket_des, buffer);
         }
     }

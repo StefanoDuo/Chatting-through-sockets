@@ -17,4 +17,9 @@ execute_command(int server_conn_sd, char* command);
 
 
 
+void
+execute_help(void);
+
+
+
 #endif

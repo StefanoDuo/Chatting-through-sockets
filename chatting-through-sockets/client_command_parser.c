@@ -68,6 +68,14 @@ parse_send(char *username)
 
 
 
+static bool
+parse_help(void)
+{
+    return check_trailing_stuff();
+}
+
+
+
 static int16_t
 match_command(const char *command)
 {
@@ -81,6 +89,8 @@ match_command(const char *command)
         return DEREGISTER;
     if (strcmp(command, "!send") == 0)
         return SEND;
+    if (strcmp(command, "!help") == 0)
+        return HELP;
     return UNKNOWN_COMMAND;
 }
 
@@ -108,6 +118,8 @@ parse_command(char *str, int16_t *command, char *username)
             return parse_deregister();
         case SEND:
             return parse_send(username);
+        case HELP:
+            return parse_help();
     }
     return false;
 }

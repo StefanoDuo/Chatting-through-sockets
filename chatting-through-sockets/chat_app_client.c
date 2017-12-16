@@ -15,8 +15,8 @@
 
 static char local_ip[INET_ADDRSTRLEN];
 static uint16_t local_port;
-static char local_username[MAX_USERNAME_LENGTH];
 static bool is_username_set = false;
+char local_username[MAX_USERNAME_LENGTH] = "";
 
 
 
@@ -29,7 +29,7 @@ set_ip_and_port(const char *ip, uint16_t port)
 
 
 
-void
+static void
 execute_register(int server_conn_sd, const char *username)
 {
     char message[MAX_MESSAGE_LENGTH];
@@ -49,32 +49,35 @@ execute_register(int server_conn_sd, const char *username)
     if (result != SUCCESS) {
     	printf("%s\n", token);
     } else {
-    	printf("Success\n");
-    	strcpy(local_username, token);
+    	printf("Successfully registered\n");
+    	strcpy(local_username, username);
     	is_username_set = true;
     }
 }
 
 
 
-void
+static void
 execute_who(int server_conn_sd)
 {
     char message[MAX_MESSAGE_LENGTH];
     sprintf(message, "%" PRId16, WHO);
     tcp_send(server_conn_sd, message);
+    
     tcp_receive(server_conn_sd, message, sizeof(message));
     int16_t how_many;
     sscanf(message, "%" SCNd16, &how_many);
+    
+    printf("Registered clients:\n");
     for (; how_many > 0; --how_many) {
     	tcp_receive(server_conn_sd, message, sizeof(message));
-    	printf("%s\n", message);
+    	printf("\t%s\n", message);
     }
 }
 
 
 
-void
+static void
 execute_quit(int server_conn_sd)
 {
     char message[MAX_MESSAGE_LENGTH];
@@ -85,7 +88,7 @@ execute_quit(int server_conn_sd)
 
 
 
-void
+static void
 execute_deregister(int server_conn_sd)
 {
 	if (!is_username_set) {
@@ -99,15 +102,29 @@ execute_deregister(int server_conn_sd)
     
     strcpy(local_username, "");
     is_username_set = false;
-    printf("Success\n");
+    printf("Successfully deregistered\n");
+}
+
+
+
+static void
+execute_send(int server_conn_sd, const char *username)
+{
+   //TODO: implement
 }
 
 
 
 void
-execute_send(int server_conn_sd, const char *username)
+execute_help(void)
 {
-   //TODO: implement
+   printf("Available commands:\n");
+   printf("!help --> shows available commands\n");
+   printf("!register <username> --> register client as <username>\n");
+   printf("!deregister --> deregister client\n");
+   printf("!who --> shows registered clients\n");
+   printf("!send <username> --> sends a message to another registered client\n");
+   printf("!quit --> sets the username offline and exits\n");
 }
 
 
@@ -142,6 +159,9 @@ execute_command(int server_conn_sd, char* str)
             break;
         case SEND:
             execute_send(server_conn_sd, username);
+            break;
+        case HELP:
+            execute_help();
             break;
     }
 }

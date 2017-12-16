@@ -27,6 +27,10 @@ check_cli_arguments(int argc, char *argv[])
 
 
 
+extern char local_username[MAX_USERNAME_LENGTH];
+
+
+
 int
 main(int argc, char *argv[])
 {
@@ -41,11 +45,15 @@ main(int argc, char *argv[])
     uint16_t server_port = 8080;
     int server_conn_sd = create_tcp_socket();
     safe_connect(server_conn_sd, server_ip, server_port);
+    printf("\nSuccessfully connected to %s:%" PRIu16 "\n", server_ip, server_port);
     
     char local_ip[] = "127.0.0.1";
     uint16_t local_port = 9000;
     set_ip_and_port(local_ip, local_port);
     // TODO: create and bind UDP socket
+    printf("Listening for direct messages on %s:%" PRIu16 "\n\n", local_ip, local_port);
+    execute_help();
+    printf("\n");
     
     int max_des = STDIN_FILENO;
     fd_set read_master;
@@ -53,6 +61,8 @@ main(int argc, char *argv[])
     FD_SET(max_des, &read_master);
 
     for (;;) {
+        printf("%s> ", local_username);
+        fflush(stdout);
         fd_set read_worker = read_master;
         safe_select(max_des + 1, &read_worker);
         for (int i = 0; i <= max_des; ++i) {
@@ -65,7 +75,6 @@ main(int argc, char *argv[])
                 } else {
                     // Receiving an UDP message from another client
                 }
-                printf("\n");
             }
         }
     }
