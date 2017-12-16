@@ -66,7 +66,7 @@ parse_quit_command(void)
 
 
 static bool
-parse_resolve_name_command(char * username)
+parse_resolve_name_command(char *username)
 {
     char *token = NULL;
 
@@ -75,6 +75,29 @@ parse_resolve_name_command(char * username)
     if (token == NULL)
         return false;
     strcpy(username, token);
+
+    return check_trailing_stuff();
+}
+
+
+
+static bool
+parse_offline_send_command(char *original_message, char *username, char* offline_message)
+{
+    char *token = NULL;
+
+    // parse username
+    token = strtok(NULL, DELIMITER);
+    if (token == NULL)
+        return false;
+    strcpy(username, token);
+
+    // parse offline_message
+    token = strtok(NULL, "");
+    if (token == NULL)
+        return false;
+    strcpy(offline_message, token);
+    printf("OFF_MESS: %s\n", offline_message);
 
     return check_trailing_stuff();
 }
@@ -103,6 +126,8 @@ parse_message(char *message, int16_t *command, char *username, char *ip_address,
             return parse_deregister_command();
         case RESOLVE_NAME:
             return parse_resolve_name_command(username);
+        case SEND:
+            return parse_offline_send_command(message, username, offline_message);
     }
     
     return false;

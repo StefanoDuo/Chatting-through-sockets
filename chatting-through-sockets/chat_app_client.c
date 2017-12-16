@@ -116,6 +116,11 @@ execute_deregister(int server_conn_sd)
 static void
 execute_send(int server_conn_sd, const char *username)
 {
+	if (!is_username_set) {
+		printf("You must be registered to send a message\n");
+		return;
+	}
+
 	char message[MAX_MESSAGE_LENGTH];
 	// first we need to translate username into a pair (ip_address, port_number)
 	sprintf(message, "%" PRId16 "%s%s", RESOLVE_NAME, DELIMITER, username);
@@ -135,11 +140,22 @@ execute_send(int server_conn_sd, const char *username)
 		printf("Message too log. Max message size: %" PRId16 "\n", MAX_MESSAGE_LENGTH);
 		return;
 	}
-	printf("\n\nMESSAGE_TO_SEND: %s", message);
 	
+	char *buffer = malloc(MAX_BUFFER_SIZE);
+	if (buffer == NULL) {
+		printf("Error during malloc(): out of memory\n");
+		exit(-1);
+	}
 	if (result_code == USERNAME_NOT_ONLINE) {
-		// TODO: implement offline message
-		printf("Offline message to be implemented\n");
+		sprintf(buffer,
+				"%" PRId16 ";%s;%s>%s",
+				SEND,
+				username,
+				local_username,
+				message);
+		tcp_send(server_conn_sd, buffer);
+		tcp_receive(server_conn_sd, buffer, MAX_BUFFER_SIZE);
+		printf("%s\n", buffer);
 		return;
 	}
 	

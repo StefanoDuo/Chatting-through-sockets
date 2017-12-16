@@ -15,7 +15,7 @@
 
 
 #define MAX_REGISTERED_CLIENTS 128
-#define MAX_OFFLINE_MESSAGES 256
+#define MAX_OFFLINE_MESSAGES 2
 
 
 
@@ -31,20 +31,20 @@ struct client {
 
 
 struct offline_message {
+	bool is_in_use;
     char message[MAX_MESSAGE_LENGTH];
-    char sender_username[MAX_USERNAME_LENGTH];
     char receiver_username[MAX_USERNAME_LENGTH];
 };
 
 
 
 static struct client reg_clients[MAX_REGISTERED_CLIENTS];
-static int curr_reg_clients = 0;
+static int16_t curr_reg_clients = 0;
 
 
 
 static struct offline_message offline_messages[MAX_OFFLINE_MESSAGES];
-static int stored_messages = 0;
+static int16_t stored_messages = 0;
 
 
 
@@ -63,7 +63,7 @@ is_index_in_use(int16_t index)
 
 
 static inline bool
-is_index_online(int index)
+is_index_online(int16_t index)
 {
     // return reg_clients[index].socket_des == -1;
     return reg_clients[index].is_online;
@@ -260,7 +260,7 @@ void
 deregister_client(int client_socket_des)
 {
     // TODO: decide whether to remove or not (check done on client side)
-    int index = get_client_index(client_socket_des);
+    int16_t index = get_client_index(client_socket_des);
     if (index == -1) {
         tcp_send(client_socket_des, "0;You are not registered");
         return;
@@ -293,40 +293,18 @@ send_registered_users(int client_socket_des)
 
 
 void
-store_offline_message(int client_socket_des)
+store_offline_message(int client_socket_des, const char *receiver_username, const char *message)
 {
-    // TODO: check if full
-    // TODO: check if nicknames exists
-    uint16_t message_max_size = MAX_USERNAME_LENGTH + MAX_MESSAGE_LENGTH + 1;
-    char *message = malloc(message_max_size);
-    if (message == NULL) {
-        printf("Out of memory\n");
-        exit(-1);
+    if (is_offline_storage_full()) {
+    	tcp_send(client_socket_des, "Offline message storage full");
+    	return;
     }
 
-    char *buffer;
-
-    tcp_receive(client_socket_des, message, message_max_size);
-    strtok(message, ";");
-
-    // parse the receiver username
-    // TODO: check if strtok works
-    buffer = strtok(NULL, ";");
-    strcpy(offline_messages[stored_messages].receiver_username, buffer);
-
-    buffer = strtok(NULL, ";");
-    strcpy(offline_messages[stored_messages].message, buffer);
-
-    char sender_username[MAX_MESSAGE_LENGTH];
-    int result;
-    // decide if we need to implement server side check for send without being registered
-    result = get_client_username(client_socket_des, sender_username);
-    if (result == -1) {
-        // TODO: handle this case
-    }
-
-    strcpy(offline_messages[stored_messages].sender_username, sender_username);
+    strcpy(offline_messages[stored_messages].receiver_username, receiver_username);
+    strcpy(offline_messages[stored_messages].message, message);
+    offline_messages[stored_messages].is_in_use = true;
     ++stored_messages;
+    tcp_send(client_socket_des, "Offline message successfully stored");
 }
 
 
@@ -334,32 +312,24 @@ store_offline_message(int client_socket_des)
 void
 retrieve_offline_message(int client_socket_des, char *requesting_username)
 {
-    char *response = malloc(MAX_USERNAME_LENGTH + MAX_MESSAGE_LENGTH + 1);
-    if (response == NULL) {
-        printf("Out of memory\n");
-        exit(-1);
-    }
     // First we calculate and tell the client how many offline messages he has received
-    int how_many = 0;
-    for (int i = 0; i < stored_messages; ++i) {
-        if (strcmp(offline_messages[i].receiver_username, requesting_username) == 0)
+    char response[MAX_COMMAND_LENGTH];
+    int16_t how_many = 0;
+    for (int16_t i = 0; i < stored_messages; ++i) {
+        if (strcmp(offline_messages[i].receiver_username, requesting_username) == 0
+        	&& offline_messages[i].is_in_use)
             ++how_many;
     }
-    sprintf(response, "%d", how_many);
+    sprintf(response, "%" PRId16, how_many);
     tcp_send(client_socket_des, response);
 
     // Then we send those messages
-    for (int i = 0; i < stored_messages; ++i) {
+    for (int16_t i = 0; i < stored_messages; ++i) {
         if (strcmp(offline_messages[i].receiver_username, requesting_username) == 0) {
-            // strcpy(response, offline_messages[i].sender_username);
-            // strcat(response, ";");
-            // strcat(response, offline_messages[i].message);
-            sprintf(response, "%s;%s", offline_messages[i].sender_username, offline_messages[i].message);
-            tcp_send(client_socket_des, response);
+            tcp_send(client_socket_des, offline_messages[i].message);
+            offline_messages[i].is_in_use = false;
         }
     }
-
-    free(response);
 }
 
 
@@ -376,7 +346,6 @@ resolve_name(int client_socket_des, const char *username)
     	sprintf(message, "%" PRId16, index);
     else 
 		sprintf(message, "%" PRId16 ";%s;%" PRIu16, SUCCESS, ip_address, port_number);
-	printf("RESOLVE_NAME response: %s\n", message);
     tcp_send(client_socket_des, message);
 }
 
@@ -386,9 +355,9 @@ bool
 serve_request(int client_socket_des)
 {
     // General request format: "command;username;ip_address;port_number\0"
-    const uint16_t max_message_size = COMMAND_MAX_LENGTH + DELIMITER_LENGTH + MAX_USERNAME_LENGTH
-        + DELIMITER_LENGTH + INET_ADDRSTRLEN + DELIMITER_LENGTH + PORT_NUMBER_MAX_LENGTH + 1;
-    char *message = malloc(max_message_size);
+    //const uint16_t max_message_size = COMMAND_MAX_LENGTH + DELIMITER_LENGTH + MAX_USERNAME_LENGTH
+    //    + DELIMITER_LENGTH + INET_ADDRSTRLEN + DELIMITER_LENGTH + PORT_NUMBER_MAX_LENGTH + 1;
+    char *message = malloc(MAX_BUFFER_SIZE);
     if (message == NULL) {
         printf("Error during malloc(): out of memory\n");
         exit(-1);
@@ -399,12 +368,12 @@ serve_request(int client_socket_des)
     char ip_address[INET_ADDRSTRLEN];
     char username[MAX_USERNAME_LENGTH];
     char offline_message[MAX_MESSAGE_LENGTH];
-    bool is_conn_open = tcp_receive(client_socket_des, message, max_message_size);
+    bool is_conn_open = tcp_receive(client_socket_des, message, MAX_BUFFER_SIZE);
     if (!is_conn_open) {
     	set_client_offline(client_socket_des);
         goto cleanup;
     }
-
+	printf("Received --> %s\n", message);
 
     bool success = parse_message(message, &command, username, ip_address, &port_number, offline_message);
     if (!success) {
@@ -434,6 +403,10 @@ serve_request(int client_socket_des)
         case RESOLVE_NAME:
             printf("RESOLVE_NAME request\n");
             resolve_name(client_socket_des, username);
+            break;
+        case SEND:
+            printf("OFFLINE_SEND request\n");
+            store_offline_message(client_socket_des, username, offline_message);
             break;
     }
 

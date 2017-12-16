@@ -9,9 +9,14 @@
 
 
 
-#define COMMAND_MAX_LENGTH 5
-#define PORT_NUMBER_MAX_LENGTH 5
+#define MAX_COMMAND_LENGTH 5
+#define MAX_PORT_NUMBER_LENGTH 5
 #define DELIMITER_LENGTH 1
+
+
+// "command;username;offline_message" where offline_message = "username>message"
+#define MAX_BUFFER_SIZE (MAX_COMMAND_LENGTH) + (MAX_USERNAME_LENGTH) \
+	+ (MAX_MESSAGE_LENGTH) + (DELIMITER_LENGTH) * 3 
 
 
 
