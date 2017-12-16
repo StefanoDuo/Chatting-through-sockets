@@ -30,6 +30,28 @@ initialize_chat_client(const char *ip, uint16_t port)
 
 
 static void
+check_for_offline_messages(int server_conn_sd)
+{
+	char *buffer = malloc(MAX_BUFFER_SIZE);
+	if (buffer == NULL) {
+		printf("Error during malloc(): out of memory\n");
+		exit(-1);
+	}
+	
+	tcp_receive(server_conn_sd, buffer, MAX_BUFFER_SIZE);
+    int16_t how_many;
+    sscanf(buffer, "%" SCNd16, &how_many);
+    
+    printf("You received %" PRId16 " messages while offline\n", how_many);
+    for (; how_many > 0; --how_many) {
+    	tcp_receive(server_conn_sd, buffer, MAX_BUFFER_SIZE);
+    	printf("%s\n", buffer);
+    }
+}
+
+
+
+static void
 execute_register(int server_conn_sd, const char *username)
 {
     char message[MAX_MESSAGE_LENGTH];
@@ -48,7 +70,7 @@ execute_register(int server_conn_sd, const char *username)
     tcp_send(server_conn_sd, message);
     
     int16_t result;
-    char *token;
+    char *token = NULL;
     tcp_receive(server_conn_sd, message, sizeof(message));
    	token = strtok(message, DELIMITER);
     sscanf(token, "%" SCNd16, &result);
@@ -60,6 +82,8 @@ execute_register(int server_conn_sd, const char *username)
     	strcpy(local_username, username);
     	is_username_set = true;
     }
+    
+    check_for_offline_messages(server_conn_sd);
 }
 
 

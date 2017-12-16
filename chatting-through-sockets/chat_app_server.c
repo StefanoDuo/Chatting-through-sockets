@@ -216,6 +216,31 @@ is_offline_storage_full(void)
 
 
 void
+retrieve_offline_messages(int client_socket_des, const char *requesting_username)
+{
+    // First we calculate and tell the client how many offline messages he has received
+    char response[MAX_COMMAND_LENGTH];
+    int16_t how_many = 0;
+    for (int16_t i = 0; i < stored_messages; ++i) {
+        if (strcmp(offline_messages[i].receiver_username, requesting_username) == 0
+        	&& offline_messages[i].is_in_use)
+            ++how_many;
+    }
+    sprintf(response, "%" PRId16, how_many);
+    tcp_send(client_socket_des, response);
+
+    // Then we send those messages
+    for (int16_t i = 0; i < stored_messages; ++i) {
+        if (strcmp(offline_messages[i].receiver_username, requesting_username) == 0) {
+            tcp_send(client_socket_des, offline_messages[i].message);
+            offline_messages[i].is_in_use = false;
+        }
+    }
+}
+
+
+
+void
 register_client_as(int client_socket_des, const char *username, const char *ip_address, uint16_t port_number)
 {
     // TODO: decide whether to remove or not (client alredy registered)
@@ -238,6 +263,8 @@ register_client_as(int client_socket_des, const char *username, const char *ip_a
     	tcp_send(client_socket_des, "0;Register full");
     }
     tcp_send(client_socket_des, "1;Success");
+    
+    retrieve_offline_messages(client_socket_des, username);
 }
 
 
@@ -305,31 +332,6 @@ store_offline_message(int client_socket_des, const char *receiver_username, cons
     offline_messages[stored_messages].is_in_use = true;
     ++stored_messages;
     tcp_send(client_socket_des, "Offline message successfully stored");
-}
-
-
-
-void
-retrieve_offline_message(int client_socket_des, char *requesting_username)
-{
-    // First we calculate and tell the client how many offline messages he has received
-    char response[MAX_COMMAND_LENGTH];
-    int16_t how_many = 0;
-    for (int16_t i = 0; i < stored_messages; ++i) {
-        if (strcmp(offline_messages[i].receiver_username, requesting_username) == 0
-        	&& offline_messages[i].is_in_use)
-            ++how_many;
-    }
-    sprintf(response, "%" PRId16, how_many);
-    tcp_send(client_socket_des, response);
-
-    // Then we send those messages
-    for (int16_t i = 0; i < stored_messages; ++i) {
-        if (strcmp(offline_messages[i].receiver_username, requesting_username) == 0) {
-            tcp_send(client_socket_des, offline_messages[i].message);
-            offline_messages[i].is_in_use = false;
-        }
-    }
 }
 
 
