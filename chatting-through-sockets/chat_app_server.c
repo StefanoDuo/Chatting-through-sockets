@@ -87,7 +87,7 @@ get_username_index(const char *username)
         if (strcmp(reg_clients[i].username, username) == 0 && is_index_in_use(i))
             return i;
     }
-    return -1;
+    return USERNAME_NOT_FOUND;
 }
 
 
@@ -134,16 +134,16 @@ get_client_username(int client_socket_des, char *username)
 }
 
 
-
+// used only for RESOLVE_NAME therefore it directly uses client --> server error codes
 static int16_t
 get_ip_and_port_from_username(const char *username, char *ip_address, uint16_t *port_number)
 {
     int16_t index = get_username_index(username);
-    if (index == -1)
-        return -1;
+    if (index == USERNAME_NOT_FOUND)
+        return USERNAME_NOT_FOUND;
 
     if (!is_index_online(index))
-        return -2;
+        return USERNAME_NOT_ONLINE;
 
     strcpy(ip_address, reg_clients[index].ip_address);
     *port_number = reg_clients[index].port_number;
@@ -196,7 +196,7 @@ set_index_offline(int16_t index)
 
 
 /**************************************************************
- ***** FUNCTIONS USED TO HANDLE OFFLINE MESSAGES STRUCTURE ****
+ ***** FUNCTIONS USED TO HANDLE OFFLINE MESSAGE STRUCTURES ****
  **************************************************************/
 
 
@@ -259,16 +259,14 @@ set_client_offline(int client_socket_des)
 void
 deregister_client(int client_socket_des)
 {
-    // TODO: decide whether to remove or not (client not registered)
-    // we can probably move this check on the client side (less secure but easier)
+    // TODO: decide whether to remove or not (check done on client side)
     int index = get_client_index(client_socket_des);
-    //if (index == -1) {
-    //    tcp_send(client_socket_des, "0;You are not registered");
-    //    return;
-    //}
+    if (index == -1) {
+        tcp_send(client_socket_des, "0;You are not registered");
+        return;
+    }
 
     remove_index_registration(index);
-    //tcp_send(client_socket_des, "1;Success");
 }
 
 
@@ -369,21 +367,16 @@ retrieve_offline_message(int client_socket_des, char *requesting_username)
 static void
 resolve_name(int client_socket_des, const char *username)
 {
+    char message[MAX_MESSAGE_LENGTH];
     char ip_address[INET_ADDRSTRLEN];
     uint16_t port_number;
     int16_t index = get_ip_and_port_from_username(username, ip_address, &port_number);
 
-    if (index == -1) {
-        tcp_send(client_socket_des, "0;Username not found");
-        return;
-    }
-    if (index == -2) {
-        tcp_send(client_socket_des, "0;Username not online");
-        return;
-    }
-
-    char message[MAX_MESSAGE_LENGTH];
-    sprintf(message, "1;%s;%" PRIu16, ip_address, port_number);
+    if (index < 0)
+    	sprintf(message, "%" PRId16, index);
+    else 
+		sprintf(message, "%" PRId16 ";%s;%" PRIu16, SUCCESS, ip_address, port_number);
+	printf("RESOLVE_NAME response: %s\n", message);
     tcp_send(client_socket_des, message);
 }
 
@@ -397,7 +390,7 @@ serve_request(int client_socket_des)
         + DELIMITER_LENGTH + INET_ADDRSTRLEN + DELIMITER_LENGTH + PORT_NUMBER_MAX_LENGTH + 1;
     char *message = malloc(max_message_size);
     if (message == NULL) {
-        printf("Out of memory\n");
+        printf("Error during malloc(): out of memory\n");
         exit(-1);
     }
 
@@ -408,14 +401,16 @@ serve_request(int client_socket_des)
     char offline_message[MAX_MESSAGE_LENGTH];
     bool is_conn_open = tcp_receive(client_socket_des, message, max_message_size);
     if (!is_conn_open) {
-        goto stop;
+    	set_client_offline(client_socket_des);
+        goto cleanup;
     }
+
 
     bool success = parse_message(message, &command, username, ip_address, &port_number, offline_message);
     if (!success) {
         printf("Error while parsing: unknown command or wrong syntax\n");
         tcp_send(client_socket_des, "0;Unknown command or wrong syntax");
-        goto stop;
+        goto cleanup;
     }
 
     switch(command) {
@@ -442,7 +437,7 @@ serve_request(int client_socket_des)
             break;
     }
 
-stop:
+cleanup:
     free(message);
     return is_conn_open;
 }

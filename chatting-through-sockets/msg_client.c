@@ -49,7 +49,7 @@ main(int argc, char *argv[])
     
     char local_ip[] = "127.0.0.1";
     uint16_t local_port = 9000;
-    set_ip_and_port(local_ip, local_port);
+    initialize_chat_client(local_ip, local_port);
     // TODO: create and bind UDP socket
     printf("Listening for direct messages on %s:%" PRIu16 "\n\n", local_ip, local_port);
     execute_help();

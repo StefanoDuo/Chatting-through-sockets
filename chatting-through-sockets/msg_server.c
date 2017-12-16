@@ -3,7 +3,6 @@
 #include "safe_socket.h"
 #include "utilities.h"
 
-
 #include <stdbool.h>
 #include <inttypes.h>
 #include <stdio.h>
@@ -43,8 +42,8 @@ main(int argc, char *argv[])
     FD_SET(max_des, &read_master);
 
     for (;;) {
-        fd_set read_worker = read_master;
         int client_socket;
+        fd_set read_worker = read_master;
         safe_select(max_des + 1, &read_worker);
         for (int i = 0; i <= max_des; ++i) {
             if (FD_ISSET(i, &read_worker)) {

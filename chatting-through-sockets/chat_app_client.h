@@ -8,7 +8,7 @@
 
 
 void
-set_ip_and_port(const char *ip, uint16_t port);
+initialize_chat_client(const char *ip, uint16_t port);
 
 
 

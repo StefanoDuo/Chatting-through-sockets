@@ -36,4 +36,4 @@ utilities.o: utilities.h
 
 
 clean:
-	rm *.o $(SERVER_NAME) $(CLIENT_NAME)
+	rm -f *.o $(SERVER_NAME) $(CLIENT_NAME)

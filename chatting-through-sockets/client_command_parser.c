@@ -5,14 +5,14 @@
 
 
 
-static const char delimiter[] = " ";
+#define CLIENT_DELIMITER " "
 
 
 
 static bool
 check_trailing_stuff(void)
 {
-    char *token = strtok(NULL, delimiter);
+    char *token = strtok(NULL, CLIENT_DELIMITER);
     return token == NULL;
 }
 
@@ -21,7 +21,7 @@ check_trailing_stuff(void)
 static bool
 parse_register(char *username)
 {
-    char *token = strtok(NULL, delimiter);
+    char *token = strtok(NULL, CLIENT_DELIMITER);
     if (token == NULL)
         return false;
     strcpy(username, token);
@@ -58,7 +58,7 @@ parse_deregister(void)
 static bool
 parse_send(char *username)
 {
-    char *token = strtok(NULL, delimiter);
+    char *token = strtok(NULL, CLIENT_DELIMITER);
     if (token == NULL)
         return false;
     strcpy(username, token);
@@ -102,7 +102,7 @@ parse_command(char *str, int16_t *command, char *username)
     char *token = NULL;
 
     // parse command
-    token = strtok(str, delimiter);
+    token = strtok(str, CLIENT_DELIMITER);
     if (token == NULL)
         return false;
 

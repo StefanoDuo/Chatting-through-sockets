@@ -21,7 +21,7 @@ char local_username[MAX_USERNAME_LENGTH] = "";
 
 
 void
-set_ip_and_port(const char *ip, uint16_t port)
+initialize_chat_client(const char *ip, uint16_t port)
 {
 	strcpy(local_ip, ip);
 	local_port = port;
@@ -33,10 +33,17 @@ static void
 execute_register(int server_conn_sd, const char *username)
 {
     char message[MAX_MESSAGE_LENGTH];
+    
     if (is_username_set) {
-    	printf("You are alredy registred\n");
+    	printf("You are alredy registered\n");
     	return;
     }
+    
+    if (strchr(username, C_DELIMITER)) {
+    	printf("Your username cannot contain '%s'\n", DELIMITER);
+    	return;
+    }
+    
     sprintf(message, "%" PRId16 ";%s;%s;%" PRIu16, REGISTER, username, local_ip, local_port);
     tcp_send(server_conn_sd, message);
     
@@ -98,7 +105,6 @@ execute_deregister(int server_conn_sd)
     char message[MAX_MESSAGE_LENGTH];
     sprintf(message, "%" PRId16, DEREGISTER);
     tcp_send(server_conn_sd, message);
-    //tcp_receive(server_conn_sd, message);
     
     strcpy(local_username, "");
     is_username_set = false;
@@ -110,7 +116,27 @@ execute_deregister(int server_conn_sd)
 static void
 execute_send(int server_conn_sd, const char *username)
 {
-   //TODO: implement
+	char message[MAX_MESSAGE_LENGTH];
+	// first we need to translate username into a pair (ip_address, port_number)
+	sprintf(message, "%" PRId16 "%s%s", RESOLVE_NAME, DELIMITER, username);
+	tcp_send(server_conn_sd, message);
+	tcp_receive(server_conn_sd, message, sizeof(message));
+	int16_t result_code;
+	sscanf(message, "%" SCNd16, &result_code);
+	
+	if (result_code == USERNAME_NOT_FOUND) {
+		printf("%s is not a registered username\n", username);
+		return;
+	}
+	
+	if (result_code == USERNAME_NOT_ONLINE) {
+		// TODO: implement offline message
+		printf("Offline message to be implemented\n");
+		return;
+	}
+	
+	// TODO: implement direct udp message
+	printf("Direct message to be implemented\n");
 }
 
 
@@ -118,13 +144,13 @@ execute_send(int server_conn_sd, const char *username)
 void
 execute_help(void)
 {
-   printf("Available commands:\n");
-   printf("!help --> shows available commands\n");
-   printf("!register <username> --> register client as <username>\n");
-   printf("!deregister --> deregister client\n");
-   printf("!who --> shows registered clients\n");
-   printf("!send <username> --> sends a message to another registered client\n");
-   printf("!quit --> sets the username offline and exits\n");
+	printf("Available commands:\n");
+   	printf("!help --> shows available commands\n");
+   	printf("!register <username> --> register client as <username>\n");
+   	printf("!deregister --> deregister client\n");
+   	printf("!who --> shows registered clients\n");
+   	printf("!send <username> --> sends a message to another registered client\n");
+    printf("!quit --> sets the username offline and exits\n");
 }
 
 

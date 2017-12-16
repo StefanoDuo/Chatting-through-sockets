@@ -17,10 +17,14 @@
 // RESPONSES
 #define SUCCESS 1
 #define UNKNOWN_COMMAND -1
+#define ERROR -2
+#define USERNAME_NOT_FOUND -1
+#define USERNAME_NOT_ONLINE -2
 
 
 
 #define DELIMITER ";"
+#define C_DELIMITER ';'
 
 
 
