@@ -49,7 +49,7 @@ main(int argc, char *argv[])
     char server_ip[] = "127.0.0.1";
     uint16_t server_port = 8080;
     char local_ip[] = "127.0.0.1";
-    uint16_t local_port = 9001;
+    uint16_t local_port = 9000;
     
     int server_conn_sd = create_tcp_socket();
     safe_connect(server_conn_sd, server_ip, server_port);
@@ -82,7 +82,9 @@ main(int argc, char *argv[])
                     execute_command(server_conn_sd, udp_sd, buffer);
                 } else {
                 	udp_receive(i, buffer, MAX_BUFFER_SIZE);
-                	printf("%s\n", buffer);
+                	// \33[2K erases the current line
+                	// \r brings the cursor at the beginning of the line
+                	printf("\33[2K\r%s\n", buffer);
                 }
             }
         }

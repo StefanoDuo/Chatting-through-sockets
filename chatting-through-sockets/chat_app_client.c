@@ -48,6 +48,8 @@ check_for_offline_messages(int server_conn_sd)
     	tcp_receive(server_conn_sd, buffer, MAX_BUFFER_SIZE);
     	printf("%s\n", buffer);
     }
+    
+    free(buffer);
 }
 
 
@@ -155,6 +157,7 @@ send_offline(int server_conn_sd, const char *dest_username, const char *message)
 	tcp_send(server_conn_sd, buffer);
 	tcp_receive(server_conn_sd, buffer, MAX_BUFFER_SIZE);
 	printf("%s\n", buffer);
+	
 	free(buffer);
 }
 
@@ -174,10 +177,12 @@ execute_send(int server_conn_sd, int udp_sd, const char *username)
 	sprintf(message, "%" PRId16 "%s%s", RESOLVE_NAME, DELIMITER, username);
 	tcp_send(server_conn_sd, message);
 	tcp_receive(server_conn_sd, message, sizeof(message));
+	printf("Received: %s\n", message);
 	
-	char *token = strtok(message, DELIMITER);
-	
+	char ip_address[INET_ADDRSTRLEN];
+	uint16_t port_number;
 	int16_t result_code;
+	char *token = strtok(message, DELIMITER);
 	sscanf(token, "%" SCNd16, &result_code);
 	
 	if (result_code == USERNAME_NOT_FOUND) {
@@ -185,35 +190,35 @@ execute_send(int server_conn_sd, int udp_sd, const char *username)
 		return;
 	}
 	
+	if (result_code == USERNAME_ONLINE) {
+		token = strtok(NULL, DELIMITER);
+		strcpy(ip_address, token);
+		token = strtok(NULL, DELIMITER);
+		sscanf(token, "%" SCNu16, &port_number);
+	}
+	
 	// parse message
 	bool parsing_completed = parse_message(message, sizeof(message));
 	if (!parsing_completed) {
 		printf("Message too log. Max message size: %" PRId16 "\n", MAX_MESSAGE_LENGTH);
-		goto cleanup;
+		return;
 	}
 	
 	if (result_code == USERNAME_NOT_ONLINE) {
 		send_offline(server_conn_sd, username, message);
-		goto cleanup;
+		return;
 	}
-
 	
-	char ip_address[INET_ADDRSTRLEN];
-	uint16_t port_number;
+	// result_code == USERNAME_ONLINE
 	char *buffer = malloc(MAX_BUFFER_SIZE);
     if (buffer == NULL) {
     	printf("Error during malloc(): out of memory\n");
     	exit(-1);
     }
     
-	token = strtok(NULL, DELIMITER);
-	strcpy(ip_address, token);
-	token = strtok(NULL, DELIMITER);
-	sscanf(token, "%" SCNu16, &port_number);
 	sprintf(buffer, "%s>%s", local_username, message);
 	udp_send(udp_sd, buffer, ip_address, port_number);
 
-cleanup:
 	free(buffer);
 }
 

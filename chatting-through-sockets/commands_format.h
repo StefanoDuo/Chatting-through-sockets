@@ -20,6 +20,7 @@
 #define ERROR -2
 #define USERNAME_NOT_FOUND -1
 #define USERNAME_NOT_ONLINE -2
+#define USERNAME_ONLINE 1
 
 
 
