@@ -15,7 +15,7 @@
 
 
 #define MAX_REGISTERED_CLIENTS 128
-#define MAX_OFFLINE_MESSAGES 2
+#define MAX_OFFLINE_MESSAGES 256
 
 
 
@@ -65,7 +65,6 @@ is_index_in_use(int16_t index)
 static inline bool
 is_index_online(int16_t index)
 {
-    // return reg_clients[index].socket_des == -1;
     return reg_clients[index].is_online;
 }
 
@@ -79,7 +78,38 @@ is_username_register_full(void)
 
 
 
-// Returns the username index inside of the register, -1 if username doesn't exists
+static void
+remove_index_registration(int16_t index)
+{
+    reg_clients[index].is_in_use = false;
+}
+
+
+
+static void
+set_index_offline(int16_t index)
+{
+    reg_clients[index].is_online = false;
+}
+
+
+
+/* Returns -1 if we can't obtain an entry (full register)
+ *
+ * If we want to reuse not_in_use entries we only need to change how we retrieve
+ * an index in this function
+ */
+static int16_t
+get_available_index()
+{
+    if (is_username_register_full())
+        return -1;
+    return curr_reg_clients++;
+}
+
+
+
+// Returns the index of the username inside the register
 static int16_t
 get_username_index(const char *username)
 {
@@ -111,7 +141,8 @@ static int16_t
 get_client_index(int client_socket_des)
 {
     for (int16_t i = 0; i < curr_reg_clients; ++i) {
-        if (reg_clients[i].socket_des == client_socket_des && is_index_in_use(i) && is_index_online(i))
+        if (reg_clients[i].socket_des == client_socket_des
+        	&& is_index_in_use(i) && is_index_online(i))
             return i;
     }
 
@@ -120,21 +151,9 @@ get_client_index(int client_socket_des)
 
 
 
-// If return value is >= 0 username will contain the client associated username (through registration)
-// returns -1 if the specified client isn't registered
-static int16_t
-get_client_username(int client_socket_des, char *username)
-{
-    int16_t index = get_client_index(client_socket_des);
-    if (index == -1)
-        return -1;
-
-    strcpy(username, reg_clients[index].username);
-    return index;
-}
-
-
-// used only for RESOLVE_NAME therefore it directly uses client --> server error codes
+/* Used only by RESOLVE_NAME requests therefore it directly uses
+ * client --> server error codes
+ */
 static int16_t
 get_ip_and_port_from_username(const char *username, char *ip_address, uint16_t *port_number)
 {
@@ -151,23 +170,24 @@ get_ip_and_port_from_username(const char *username, char *ip_address, uint16_t *
 }
 
 
-static int16_t
-get_available_index()
-{
-    if (is_username_register_full())
-        return -1;
-    return curr_reg_clients++;
-}
 
-
+/* Returns true if the registration was successfull (i.e. we found an entry in
+ * the register), false otherwise
+ */
 static bool
 insert_username_registration(int16_t index, const char *username, const char *ip_address, uint16_t port_number, int client_socket_des)
 {
+	/* If an index is alredy specified (index != -1, used when an offline
+	 * username goes back online) then that index is used otherwise we
+	 * try to obtain a free entry through get_available_index() the "free"
+	 * semantic is defined by get_available_index()
+	 */
     if (index == -1) {
         index = get_available_index();
         if (index == -1)
             return false;
     }
+    
     strcpy(reg_clients[index].username, username);
     strcpy(reg_clients[index].ip_address, ip_address);
     reg_clients[index].port_number = port_number;
@@ -175,22 +195,6 @@ insert_username_registration(int16_t index, const char *username, const char *ip
     reg_clients[index].is_in_use = true;
     reg_clients[index].is_online = true;
     return true;
-}
-
-
-
-static void
-remove_index_registration(int16_t index)
-{
-    reg_clients[index].is_in_use = false;
-}
-
-
-
-static void
-set_index_offline(int16_t index)
-{
-    reg_clients[index].is_online = false;
 }
 
 
@@ -215,11 +219,12 @@ is_offline_storage_full(void)
 
 
 
-void
+static void
 retrieve_offline_messages(int client_socket_des, const char *requesting_username)
 {
-    // First we calculate and tell the client how many offline messages he has received
     char response[MAX_COMMAND_LENGTH];
+    
+    // First we calculate and tell the client how many offline messages he has received
     int16_t how_many = 0;
     for (int16_t i = 0; i < stored_messages; ++i) {
         if (strcmp(offline_messages[i].receiver_username, requesting_username) == 0
@@ -229,7 +234,7 @@ retrieve_offline_messages(int client_socket_des, const char *requesting_username
     sprintf(response, "%" PRId16, how_many);
     tcp_send(client_socket_des, response);
 
-    // Then we send those messages
+    // Then we send those messages separately and mark them as not longer in use
     for (int16_t i = 0; i < stored_messages; ++i) {
         if (strcmp(offline_messages[i].receiver_username, requesting_username) == 0) {
             tcp_send(client_socket_des, offline_messages[i].message);
@@ -240,19 +245,18 @@ retrieve_offline_messages(int client_socket_des, const char *requesting_username
 
 
 
-void
+static void
 register_client_as(int client_socket_des, const char *username, const char *ip_address, uint16_t port_number)
 {
-    // TODO: decide whether to remove or not (client alredy registered)
-    // we can move this check on the client side (less secure but easier)
     int16_t index = get_client_index(client_socket_des);
     if (index != -1) {
+    	// This can't happen because it's checked on the client side
         tcp_send(client_socket_des, "0;You are alredy registered");
         return;
     }
 
     index = get_username_index(username);
-    // if the username is alredy registered we can reregister only if it is offline
+    // If the username is alredy registered we can reregister only if it is offline
     if (index >= 0 && is_index_online(index)) {
         tcp_send(client_socket_des, "0;Username alredy in use");
         return;
@@ -261,20 +265,28 @@ register_client_as(int client_socket_des, const char *username, const char *ip_a
     bool success = insert_username_registration(index, username, ip_address, port_number, client_socket_des);
     if (!success) {
     	tcp_send(client_socket_des, "0;Register full");
+    	return;
     }
-    tcp_send(client_socket_des, "1;Success");
     
+    tcp_send(client_socket_des, "1;Success");
     retrieve_offline_messages(client_socket_des, username);
 }
 
 
 
-void
+static void
 set_client_offline(int client_socket_des)
 {
-    // we don't send anything back because we expect the client to close the connection after
-    // sending that request
+    /* We don't send anything back because we expect the client to close the
+     * connection after sending that request, we don't close the socket because
+     * that's handled inside msg_server.c our job is just to manage the app
+     * data structures
+     */
     int16_t index = get_client_index(client_socket_des);
+    
+    /* A client who isn't registered might be closing the connection, in that
+     * case we don't need to se anything as offline
+     */
     if (index == -1)
         return;
 
@@ -283,12 +295,15 @@ set_client_offline(int client_socket_des)
 
 
 
-void
+static void
 deregister_client(int client_socket_des)
 {
-    // TODO: decide whether to remove or not (check done on client side)
+	/* The socket is closed in msg_server.c, here we only manage the app
+	 * data structures
+	 */
     int16_t index = get_client_index(client_socket_des);
     if (index == -1) {
+    	// This can't happen because it's checked on the client side
         tcp_send(client_socket_des, "0;You are not registered");
         return;
     }
@@ -298,16 +313,21 @@ deregister_client(int client_socket_des)
 
 
 
-void
+static void
 send_registered_users(int client_socket_des)
 {
-    char buffer[MAX_MESSAGE_LENGTH];
+    char *buffer = malloc(MAX_BUFFER_SIZE);
+    if (buffer == NULL) {
+        printf("Error during malloc(): out of memory\n");
+        exit(-1);
+    }
+    
     int16_t how_many = get_registered_users_number();
     sprintf(buffer, "%" SCNd16, how_many);
     tcp_send(client_socket_des, buffer);
+    
     for (int16_t i = 0; i < curr_reg_clients; ++i) {
         if (is_index_in_use(i)) {
-        	
             sprintf(buffer,
             		"%s(%s)",
             		reg_clients[i].username,
@@ -315,13 +335,18 @@ send_registered_users(int client_socket_des)
             tcp_send(client_socket_des, buffer);
         }
     }
+    
+    free(buffer);
 }
 
 
 
-void
+static void
 store_offline_message(int client_socket_des, const char *receiver_username, const char *message)
 {
+	/* We don't need to send a result code because in either case the client app
+	 * must only tell the user the result of the action
+	 */
     if (is_offline_storage_full()) {
     	tcp_send(client_socket_des, "Offline message storage full");
     	return;
@@ -339,16 +364,24 @@ store_offline_message(int client_socket_des, const char *receiver_username, cons
 static void
 resolve_name(int client_socket_des, const char *username)
 {
-    char message[MAX_MESSAGE_LENGTH];
     char ip_address[INET_ADDRSTRLEN];
     uint16_t port_number;
-    int16_t index = get_ip_and_port_from_username(username, ip_address, &port_number);
-
+    int16_t index;
+    char *message = malloc(MAX_BUFFER_SIZE);
+    if (message == NULL) {
+        printf("Error during malloc(): out of memory\n");
+        exit(-1);
+    }
+    
+    index = get_ip_and_port_from_username(username, ip_address, &port_number);
     if (index < 0)
+    	// Distinct error codes are directly returned by get_ip_and_port_from_username()
     	sprintf(message, "%" PRId16, index);
     else 
 		sprintf(message, "%" PRId16 ";%s;%" PRIu16, SUCCESS, ip_address, port_number);
+
     tcp_send(client_socket_des, message);
+    free(message);
 }
 
 
@@ -356,9 +389,6 @@ resolve_name(int client_socket_des, const char *username)
 bool
 serve_request(int client_socket_des)
 {
-    // General request format: "command;username;ip_address;port_number\0"
-    //const uint16_t max_message_size = COMMAND_MAX_LENGTH + DELIMITER_LENGTH + MAX_USERNAME_LENGTH
-    //    + DELIMITER_LENGTH + INET_ADDRSTRLEN + DELIMITER_LENGTH + PORT_NUMBER_MAX_LENGTH + 1;
     char *message = malloc(MAX_BUFFER_SIZE);
     if (message == NULL) {
         printf("Error during malloc(): out of memory\n");
@@ -370,18 +400,20 @@ serve_request(int client_socket_des)
     char ip_address[INET_ADDRSTRLEN];
     char username[MAX_USERNAME_LENGTH];
     char offline_message[MAX_MESSAGE_LENGTH];
+    
     bool is_conn_open = tcp_receive(client_socket_des, message, MAX_BUFFER_SIZE);
     if (!is_conn_open) {
     	set_client_offline(client_socket_des);
-        goto cleanup;
+        goto request_cleanup;
     }
 	printf("Received --> %s\n", message);
 
     bool success = parse_message(message, &command, username, ip_address, &port_number, offline_message);
     if (!success) {
+    	// This can't happen because it's checked on the client side
         printf("Error while parsing: unknown command or wrong syntax\n");
         tcp_send(client_socket_des, "0;Unknown command or wrong syntax");
-        goto cleanup;
+        goto request_cleanup;
     }
 
     switch(command) {
@@ -412,7 +444,7 @@ serve_request(int client_socket_des)
             break;
     }
 
-cleanup:
+request_cleanup:
     free(message);
     return is_conn_open;
 }

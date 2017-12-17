@@ -13,10 +13,6 @@
 
 
 
-#define BUFFER_SIZE 128
-
-
-
 void
 check_cli_arguments(int argc, char *argv[])
 {
@@ -28,6 +24,7 @@ check_cli_arguments(int argc, char *argv[])
 
 
 
+// defined in chat_app_client.c
 extern char local_username[MAX_USERNAME_LENGTH];
 
 
@@ -40,16 +37,16 @@ main(int argc, char *argv[])
     	printf("Error during malloc(): out of memory\n");
     	exit(-1);
     }
-    //check_cli_arguments(argc, argv);
+    check_cli_arguments(argc, argv);
     set_sigpipe_handler();
-    // char local_ip = argv[1];
-    // uint16_t local_port = get_port_number(argv[2]);
-    // char server_ip = argv[3];
-    // uint16_t server_port = get_port_number(argv[4]);
-    char server_ip[] = "127.0.0.1";
-    uint16_t server_port = 8080;
-    char local_ip[] = "127.0.0.1";
-    uint16_t local_port = 9000;
+    char *local_ip = argv[1];
+    uint16_t local_port = get_port_number(argv[2]);
+    char *server_ip = argv[3];
+    uint16_t server_port = get_port_number(argv[4]);
+    // char server_ip[] = "127.0.0.1";
+    // uint16_t server_port = 8080;
+    // char local_ip[] = "127.0.0.1";
+    // uint16_t local_port = 9001;
     
     int server_conn_sd = create_tcp_socket();
     safe_connect(server_conn_sd, server_ip, server_port);
@@ -71,16 +68,19 @@ main(int argc, char *argv[])
     for (;;) {
         printf("%s> ", local_username);
         fflush(stdout);
+        
         fd_set read_worker = read_master;
         safe_select(max_des + 1, &read_worker);
+        
         for (int i = 0; i <= max_des; ++i) {
             if (FD_ISSET(i, &read_worker)) {
                 if (i == STDIN_FILENO) {
                     // New user command
-                    fgets(buffer, BUFFER_SIZE, stdin);
+                    fgets(buffer, MAX_BUFFER_SIZE, stdin);
                     buffer[strlen(buffer) - 1] = '\0';    // removes trailing '\n'
                     execute_command(server_conn_sd, udp_sd, buffer);
                 } else {
+                	// New direct message
                 	udp_receive(i, buffer, MAX_BUFFER_SIZE);
                 	// \33[2K erases the current line
                 	// \r brings the cursor at the beginning of the line

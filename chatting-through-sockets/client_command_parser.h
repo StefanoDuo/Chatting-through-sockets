@@ -9,16 +9,12 @@
 
 
 bool
-parse_command(char * str, int16_t *command, char *username);
+parse_command(char *str, int16_t *command, char *username);
 
 
 
 bool
-parse_message(char * str, uint16_t max_size);
-
-
-
-// TODO: recv server response in every command
+parse_message(char *str, uint16_t max_size);
 
 
 

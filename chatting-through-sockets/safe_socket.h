@@ -43,10 +43,4 @@ create_addr_struct(const char *ip_address, uint16_t port_number);
 
 
 
-// TODO: implement
-void
-retrieve_ip_and_port(struct sockaddr_in addr, char *ip_address, uint16_t *port_number);
-
-
-
 #endif

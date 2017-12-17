@@ -39,7 +39,7 @@ main(int argc, char *argv[])
     int max_des = server_socket;
     fd_set read_master;
     FD_ZERO(&read_master);
-    FD_SET(max_des, &read_master);
+    FD_SET(server_socket, &read_master);
 
     for (;;) {
         int client_socket;
@@ -62,7 +62,7 @@ main(int argc, char *argv[])
                         safe_close(i);
                     }
                 }
-                printf("\n");
+            	printf("\n");
             }
         }
     }

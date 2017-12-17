@@ -127,15 +127,20 @@ parse_command(char *str, int16_t *command, char *username)
 
 
 
+/* Used to compose a multi-line message during a !send
+ *
+ * Returns false if the message exceeded max_size
+ */
 bool
 parse_message(char *str, uint16_t max_size)
 {
 	uint16_t current_size = 0;	
 	do {
-		// fgets reads max_size - current_size - 1 characters at most
-		// therefore when we only have 1 byte of space left in str
-		// it doesn't read anything, to handle that case we exit from the while
-		// and read an auxiliary buffer to check if the user wrote "./n"
+		/* fgets reads max_size - current_size - 1 characters at most
+		 * therefore when we only have 1 byte of space left in str
+		 * it doesn't read anything, to handle that case we exit from the while
+		 * and read into an auxiliary buffer to check if the user wrote "./n"
+		 */
 		fgets(str, max_size - current_size, stdin);
 		if (strcmp(str, ".\n") == 0) {
 			*str = '\0';
@@ -146,8 +151,9 @@ parse_message(char *str, uint16_t max_size)
 	} while (current_size < max_size - 1);
 	
 	if (max_size - current_size == 1) {
-		// we have read a message of max_size, now we need to check if the user
-		// wrote "./n" to end the message
+		/* We have read a message of max_size, now we need to check if the user
+		 * wrote "./n" to end the message
+		 */
 		char buffer[3];
 		fgets(buffer, sizeof(buffer), stdin);
 		if (strcmp(buffer, ".\n") == 0) {

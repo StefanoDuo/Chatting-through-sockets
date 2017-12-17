@@ -4,22 +4,13 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <sys/socket.h>
-#include <errno.h>
 #include <arpa/inet.h>
 #include <string.h>
 #include <stdlib.h>
 
 
 
-int
-create_tcp_socket(void)
-{
-    return create_socket(SOCK_STREAM);
-}
-
-
-
-void
+static void
 safe_listen(int socket_des, int backlog)
 {
     int result = listen(socket_des, backlog);
@@ -27,6 +18,14 @@ safe_listen(int socket_des, int backlog)
         perror("Error during listen()");
         exit(-1);
     }
+}
+
+
+
+int
+create_tcp_socket(void)
+{
+    return create_socket(SOCK_STREAM);
 }
 
 
@@ -76,12 +75,10 @@ safe_send(int socket_des, const void *message, uint16_t message_length)
     // https://stackoverflow.com/questions/19697218/can-send-on-a-tcp-socket-return-0-and-length
     while (bytes_sent < message_length) {
         int result = send(socket_des, message, message_length, 0);
-        // TODO: add signal handler for SIGPIPE signal, received when we send on a closed pipe
         if (result < 0) {
             perror("Error during send()");
             exit(-1);
         }
-        //printf("Sending either %s or %" PRIu16 "\n", (const char *)message, *(const uint16_t *)message);
         // Decidere se implementare error checking per errno == ECONNRESET
         // cioe' se l'altro host ha deciso di resettare la connessione senza fare
         // il corretto hand shaking ma senza neanche scomparire senza dire niente
