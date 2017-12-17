@@ -12,6 +12,7 @@ create_udp_socket(void);
 
 
 
+// message must be a C string
 void
 udp_send(int socket_des, const char *message, const char *ip, uint16_t port);
 

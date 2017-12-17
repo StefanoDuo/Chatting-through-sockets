@@ -105,7 +105,8 @@ parse_offline_send_command(char *original_message, char *username, char* offline
 
 
 bool
-parse_message(char *message, int16_t *command, char *username, char *ip_address, uint16_t *port_number, char *offline_message)
+parse_message(char *message, int16_t *command, char *username, char *ip_address,
+			  uint16_t *port_number, char *offline_message)
 {
     char *token = strtok(message, DELIMITER);
     if (token == NULL)
@@ -113,7 +114,7 @@ parse_message(char *message, int16_t *command, char *username, char *ip_address,
     // https://stackoverflow.com/questions/12120426/how-to-print-uint32-t-and-uint16-t-variables-value
     // https://stackoverflow.com/questions/33675163/what-is-the-correct-and-portable-clang-gcc-modifier-for-uint16-t-in-sscanf
     // http://en.cppreference.com/w/cpp/types/integer#Format_constants_for_the_std::fscanf_family_of_functions
-    sscanf(token, "%" SCNu16, command);
+    sscanf(token, "%" SCNd16, command);
 
     switch(*command) {
         case REGISTER:

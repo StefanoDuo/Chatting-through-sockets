@@ -70,27 +70,28 @@ static void
 safe_send(int socket_des, const void *message, uint16_t message_length)
 {
     uint16_t bytes_sent = 0;
-    // send might send less than length if it blocks and the process receives
-    // a signal, to avoid sending less than wanted we wrap it into a while
-    // https://stackoverflow.com/questions/19697218/can-send-on-a-tcp-socket-return-0-and-length
+    /* send might send less than message_length if it blocks and the process receives
+     * a signal, to avoid sending less than wanted we wrap it into a while
+     * https://stackoverflow.com/questions/19697218/can-send-on-a-tcp-socket-return-0-and-length
+     *
+     * If we send on a closed "connection" we receive a SIGPIPE signal
+     */
     while (bytes_sent < message_length) {
+    	// result contains the exact number of bytes sent
         int result = send(socket_des, message, message_length, 0);
         if (result < 0) {
             perror("Error during send()");
             exit(-1);
         }
-        // Decidere se implementare error checking per errno == ECONNRESET
-        // cioe' se l'altro host ha deciso di resettare la connessione senza fare
-        // il corretto hand shaking ma senza neanche scomparire senza dire niente
-        // o per errno == EPIPE cioe' quando la connessione viene chiusa con il corretto handshake
-        // https://stackoverflow.com/questions/15406097/writing-on-a-tcp-socket-closed-by-the-peer
         bytes_sent += result;
         message += result;
     }
 }
 
 
-
+/* Implements the application protocol, i.e. first we send the size of the message
+ * as an uint16_t then we send the real message
+ */
 void
 tcp_send(int socket_des, const char *message)
 {
@@ -106,6 +107,7 @@ static bool
 safe_receive(int socket_des, void *message, uint16_t message_length)
 {
     uint16_t bytes_received = 0;
+    // We need the while for the same reason illustrated inside safe_send()
     while (bytes_received < message_length) {
         int result = recv(socket_des, message, message_length, 0);
         if (result == -1) {
@@ -113,11 +115,12 @@ safe_receive(int socket_des, void *message, uint16_t message_length)
             exit(-1);
         }
         if (result == 0)
+        	// Connection has been closed by the other host
             return false;
         bytes_received += result;
         message += result;
     }
-    return bytes_received;
+    return true;
 }
 
 

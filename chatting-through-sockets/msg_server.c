@@ -6,7 +6,7 @@
 #include <stdbool.h>
 #include <inttypes.h>
 #include <stdio.h>
-#include <unistd.h>
+#include <stdlib.h>
 #include <sys/select.h>
 
 
@@ -29,10 +29,10 @@ check_cli_arguments(int argc, char *argv[])
 int
 main(int argc, char *argv[])
 {
-    //check_cli_arguments(argc, argv);
+    check_cli_arguments(argc, argv);
     set_sigpipe_handler();
-    //uint16_t port_number = get_port_number(argv[1]);
-    uint16_t port_number = 8080;
+    
+    uint16_t port_number = get_port_number(argv[1]);
     int server_socket = create_passive_tcp_socket(NULL, port_number, BACKLOG);
     printf("\nListening for incoming connections on :%" PRIu16 "\n\n", port_number);
 

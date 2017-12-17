@@ -7,6 +7,7 @@
 
 #include <inttypes.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
 #include <sys/select.h>
@@ -37,16 +38,14 @@ main(int argc, char *argv[])
     	printf("Error during malloc(): out of memory\n");
     	exit(-1);
     }
+    
     check_cli_arguments(argc, argv);
     set_sigpipe_handler();
+    
     char *local_ip = argv[1];
     uint16_t local_port = get_port_number(argv[2]);
     char *server_ip = argv[3];
     uint16_t server_port = get_port_number(argv[4]);
-    // char server_ip[] = "127.0.0.1";
-    // uint16_t server_port = 8080;
-    // char local_ip[] = "127.0.0.1";
-    // uint16_t local_port = 9001;
     
     int server_conn_sd = create_tcp_socket();
     safe_connect(server_conn_sd, server_ip, server_port);

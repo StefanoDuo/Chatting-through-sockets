@@ -1,9 +1,8 @@
 #include "utilities.h"
 
 #include <stdio.h>
-#include <unistd.h>
-#include <stdio.h>
 #include <signal.h>
+#include <stdlib.h>
 
 
 
@@ -30,7 +29,10 @@ sigpipe_handler(int signum)
 }
 
 
-
+/* We need to set a SIGPIPE handler so we know if the other side of the connection
+ * has closed its socket (SIGPIPE is received after a send() on a closed connection)
+ * https://stackoverflow.com/questions/15406097/writing-on-a-tcp-socket-closed-by-the-peer
+ */
 void
 set_sigpipe_handler()
 {
