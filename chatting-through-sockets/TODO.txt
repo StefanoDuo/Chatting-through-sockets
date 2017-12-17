@@ -1,2 +1,1 @@
 1. implement direct messages
-2. implement offline messages request

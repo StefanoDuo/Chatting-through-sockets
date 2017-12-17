@@ -13,7 +13,7 @@ initialize_chat_client(const char *ip, uint16_t port);
 
 
 void
-execute_command(int server_conn_sd, char* command);
+execute_command(int server_conn_sd, int udp_sd, char* command);
 
 
 

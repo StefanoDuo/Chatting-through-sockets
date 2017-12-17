@@ -1,6 +1,7 @@
 #include "chat_app_client.h"
 #include "client_command_parser.h"
 #include "safe_tcp.h"
+#include "safe_udp.h"
 #include "safe_socket.h"
 #include "chat_app_sizes.h"
 #include "commands_format.h"
@@ -136,22 +137,48 @@ execute_deregister(int server_conn_sd)
 }
 
 
+static void
+send_offline(int server_conn_sd, const char *dest_username, const char *message)
+{
+	char *buffer = malloc(MAX_BUFFER_SIZE);
+	if (buffer == NULL) {
+		printf("Error during malloc(): out of memory\n");
+		exit(-1);
+	}
+	
+	sprintf(buffer,
+			"%" PRId16 ";%s;%s>%s",
+			SEND,
+			dest_username,
+			local_username,
+			message);
+	tcp_send(server_conn_sd, buffer);
+	tcp_receive(server_conn_sd, buffer, MAX_BUFFER_SIZE);
+	printf("%s\n", buffer);
+	free(buffer);
+}
+
+
 
 static void
-execute_send(int server_conn_sd, const char *username)
+execute_send(int server_conn_sd, int udp_sd, const char *username)
 {
 	if (!is_username_set) {
 		printf("You must be registered to send a message\n");
 		return;
 	}
-
-	char message[MAX_MESSAGE_LENGTH];
+	
+    char message[MAX_MESSAGE_LENGTH];
+	
 	// first we need to translate username into a pair (ip_address, port_number)
 	sprintf(message, "%" PRId16 "%s%s", RESOLVE_NAME, DELIMITER, username);
 	tcp_send(server_conn_sd, message);
 	tcp_receive(server_conn_sd, message, sizeof(message));
+	
+	char *token = strtok(message, DELIMITER);
+	
 	int16_t result_code;
-	sscanf(message, "%" SCNd16, &result_code);
+	sscanf(token, "%" SCNd16, &result_code);
 	
 	if (result_code == USERNAME_NOT_FOUND) {
 		printf("%s is not a registered username\n", username);
@@ -162,29 +189,32 @@ execute_send(int server_conn_sd, const char *username)
 	bool parsing_completed = parse_message(message, sizeof(message));
 	if (!parsing_completed) {
 		printf("Message too log. Max message size: %" PRId16 "\n", MAX_MESSAGE_LENGTH);
-		return;
+		goto cleanup;
 	}
 	
-	char *buffer = malloc(MAX_BUFFER_SIZE);
-	if (buffer == NULL) {
-		printf("Error during malloc(): out of memory\n");
-		exit(-1);
-	}
 	if (result_code == USERNAME_NOT_ONLINE) {
-		sprintf(buffer,
-				"%" PRId16 ";%s;%s>%s",
-				SEND,
-				username,
-				local_username,
-				message);
-		tcp_send(server_conn_sd, buffer);
-		tcp_receive(server_conn_sd, buffer, MAX_BUFFER_SIZE);
-		printf("%s\n", buffer);
-		return;
+		send_offline(server_conn_sd, username, message);
+		goto cleanup;
 	}
+
 	
-	// TODO: implement direct udp message
-	printf("Direct message to be implemented\n");
+	char ip_address[INET_ADDRSTRLEN];
+	uint16_t port_number;
+	char *buffer = malloc(MAX_BUFFER_SIZE);
+    if (buffer == NULL) {
+    	printf("Error during malloc(): out of memory\n");
+    	exit(-1);
+    }
+    
+	token = strtok(NULL, DELIMITER);
+	strcpy(ip_address, token);
+	token = strtok(NULL, DELIMITER);
+	sscanf(token, "%" SCNu16, &port_number);
+	sprintf(buffer, "%s>%s", local_username, message);
+	udp_send(udp_sd, buffer, ip_address, port_number);
+
+cleanup:
+	free(buffer);
 }
 
 
@@ -204,7 +234,7 @@ execute_help(void)
 
 
 void
-execute_command(int server_conn_sd, char* str)
+execute_command(int server_conn_sd, int udp_sd, char* str)
 {
     char username[MAX_USERNAME_LENGTH];
     int16_t command;
@@ -232,7 +262,7 @@ execute_command(int server_conn_sd, char* str)
             execute_deregister(server_conn_sd);
             break;
         case SEND:
-            execute_send(server_conn_sd, username);
+            execute_send(server_conn_sd, udp_sd, username);
             break;
         case HELP:
             execute_help();
