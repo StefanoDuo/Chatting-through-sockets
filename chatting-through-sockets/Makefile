@@ -5,6 +5,10 @@ SERVER_NAME = msg_server
 
 
 
+all: client server
+
+
+
 client: msg_client.o chat_app_client.o client_command_parser.o safe_tcp.o safe_udp.o safe_socket.o utilities.o
 	$(CC) $(CFLAGS) msg_client.o chat_app_client.o client_command_parser.o safe_tcp.o safe_udp.o safe_socket.o utilities.o -o $(CLIENT_NAME)
 

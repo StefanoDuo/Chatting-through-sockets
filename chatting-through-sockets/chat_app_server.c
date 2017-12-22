@@ -406,7 +406,8 @@ serve_request(int client_socket_des)
     	set_client_offline(client_socket_des);
         goto request_cleanup;
     }
-	printf("Received --> %s\n", message);
+    
+	// printf("Received --> %s\n", message);
 
     bool success = parse_message(message, &command, username, ip_address, &port_number, offline_message);
     if (!success) {
@@ -415,34 +416,39 @@ serve_request(int client_socket_des)
         tcp_send(client_socket_des, "0;Unknown command or wrong syntax");
         goto request_cleanup;
     }
+    
+    char client_ip[INET_ADDRSTRLEN];
+    uint16_t client_port;
+    safe_getpeername(client_socket_des, client_ip, &client_port);
 
     switch(command) {
         case REGISTER:
-            printf("REGISTER request\n");
+            printf("REGISTER");
             register_client_as(client_socket_des, username, ip_address, port_number);
             break;
         case WHO:
-            printf("WHO request\n");
+            printf("WHO");
             send_registered_users(client_socket_des);
             break;
         case QUIT:
-            printf("QUIT request\n");
+            printf("QUIT");
             set_client_offline(client_socket_des);
             is_conn_open = false;
             break;
         case DEREGISTER:
-            printf("DEREGISTER request\n");
+            printf("DEREGISTER");
             deregister_client(client_socket_des);
             break;
         case RESOLVE_NAME:
-            printf("RESOLVE_NAME request\n");
+            printf("RESOLVE_NAME");
             resolve_name(client_socket_des, username);
             break;
         case SEND:
-            printf("OFFLINE_SEND request\n");
+            printf("OFFLINE_SEND");
             store_offline_message(client_socket_des, username, offline_message);
             break;
     }
+    printf(" request from %s:%" PRIu16 "\n", client_ip, client_port);
 
 request_cleanup:
     free(message);

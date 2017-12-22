@@ -83,7 +83,7 @@ main(int argc, char *argv[])
                 	udp_receive(i, buffer, MAX_BUFFER_SIZE);
                 	// \33[2K erases the current line
                 	// \r brings the cursor at the beginning of the line
-                	printf("\33[2K\r%s\n", buffer);
+                	printf("\33[2K\r%s", buffer);
                 }
             }
         }

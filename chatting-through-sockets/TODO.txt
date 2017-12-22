@@ -1,1 +1,1 @@
-1. implement direct messages
+chage safe_accept to return ip and port number

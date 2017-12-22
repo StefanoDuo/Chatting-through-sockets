@@ -81,3 +81,37 @@ create_addr_struct(const char *ip_address, uint16_t port_number)
 
     return addr;
 }
+
+
+
+void
+addr_from_struct(struct sockaddr_in addr, char *ip_address, uint16_t *port_number)
+{
+    *port_number = ntohs(addr.sin_port);
+    const char *result = inet_ntop(AF_INET, &(addr.sin_addr), ip_address, INET_ADDRSTRLEN);
+    if (result == NULL) {
+        printf("Error while translating the following ip address %s\n", ip_address);
+        exit(-1);
+    }
+}
+
+
+
+void
+safe_getpeername(int socket_des, char *ip_address, uint16_t *port_number)
+{
+	struct sockaddr_in addr;
+	socklen_t addrlen = sizeof(addr);
+	
+	int result = getpeername(socket_des, (struct sockaddr *)&addr, &addrlen);
+	if (result == -1) {
+		perror("Error during getpeername():");
+        exit(-1);
+    }
+    
+    addr_from_struct(addr, ip_address, port_number);
+}
+
+
+
+

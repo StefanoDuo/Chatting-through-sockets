@@ -43,4 +43,14 @@ create_addr_struct(const char *ip_address, uint16_t port_number);
 
 
 
+void
+addr_from_struct(struct sockaddr_in addr, char *ip_address, uint16_t *port_number);
+
+
+
+void
+safe_getpeername(int socket_des, char *ip_address, uint16_t *port_number);
+
+
+
 #endif

@@ -97,7 +97,6 @@ parse_offline_send_command(char *original_message, char *username, char* offline
     if (token == NULL)
         return false;
     strcpy(offline_message, token);
-    printf("OFF_MESS: %s\n", offline_message);
 
     return check_trailing_stuff();
 }

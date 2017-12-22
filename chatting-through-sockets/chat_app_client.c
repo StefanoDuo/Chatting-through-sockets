@@ -37,7 +37,7 @@ check_for_offline_messages(int server_conn_sd)
     printf("You received %" PRId16 " messages while offline\n", how_many);
     for (; how_many > 0; --how_many) {
     	tcp_receive(server_conn_sd, buffer, MAX_BUFFER_SIZE);
-    	printf("%s\n", buffer);
+    	printf("%s", buffer);
     }
     
     free(buffer);
