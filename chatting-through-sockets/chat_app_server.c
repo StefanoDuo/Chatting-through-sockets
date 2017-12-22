@@ -100,7 +100,7 @@ set_index_offline(int16_t index)
  * an index in this function
  */
 static int16_t
-get_available_index()
+get_available_register_index()
 {
     if (is_username_register_full())
         return -1;
@@ -179,11 +179,11 @@ insert_username_registration(int16_t index, const char *username, const char *ip
 {
 	/* If an index is alredy specified (index != -1, used when an offline
 	 * username goes back online) then that index is used otherwise we
-	 * try to obtain a free entry through get_available_index() the "free"
-	 * semantic is defined by get_available_index()
+	 * try to obtain a free entry through get_available_register_index() the "free"
+	 * semantic is defined by get_available_register_index()
 	 */
     if (index == -1) {
-        index = get_available_index();
+        index = get_available_register_index();
         if (index == -1)
             return false;
     }
@@ -205,10 +205,20 @@ insert_username_registration(int16_t index, const char *username, const char *ip
 
 
 
-static inline int
+static inline bool
 is_offline_storage_full(void)
 {
     return stored_messages == MAX_OFFLINE_MESSAGES;
+}
+
+
+
+static int16_t
+get_available_message_index()
+{
+    if (is_offline_storage_full())
+        return -1;
+    return stored_messages++;
 }
 
 
@@ -241,6 +251,27 @@ retrieve_offline_messages(int client_socket_des, const char *requesting_username
             offline_messages[i].is_in_use = false;
         }
     }
+}
+
+
+
+static void
+store_offline_message(int client_socket_des, const char *receiver_username, const char *message)
+{
+	/* We don't need to send a result code because in either case the client app
+
+	 * must only tell the user the result of the action
+	 */
+	int16_t index = get_available_message_index();
+    if (index == -1) {
+    	tcp_send(client_socket_des, "Offline message storage full");
+    	return;
+    }
+
+    strcpy(offline_messages[index].receiver_username, receiver_username);
+    strcpy(offline_messages[index].message, message);
+    offline_messages[index].is_in_use = true;
+    tcp_send(client_socket_des, "Offline message successfully stored");
 }
 
 
@@ -337,26 +368,6 @@ send_registered_users(int client_socket_des)
     }
     
     free(buffer);
-}
-
-
-
-static void
-store_offline_message(int client_socket_des, const char *receiver_username, const char *message)
-{
-	/* We don't need to send a result code because in either case the client app
-	 * must only tell the user the result of the action
-	 */
-    if (is_offline_storage_full()) {
-    	tcp_send(client_socket_des, "Offline message storage full");
-    	return;
-    }
-
-    strcpy(offline_messages[stored_messages].receiver_username, receiver_username);
-    strcpy(offline_messages[stored_messages].message, message);
-    offline_messages[stored_messages].is_in_use = true;
-    ++stored_messages;
-    tcp_send(client_socket_des, "Offline message successfully stored");
 }
 
 

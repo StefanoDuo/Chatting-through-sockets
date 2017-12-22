@@ -42,13 +42,17 @@ create_passive_tcp_socket(const char *ip_address, uint16_t port_number, int back
 
 
 int
-safe_accept(int passive_socket)
+safe_accept(int passive_socket, char *ip_address, uint16_t *port_number)
 {
-    int connection_socket_des = accept(passive_socket, NULL, NULL);
+	struct sockaddr_in addr;
+	socklen_t addrlen = sizeof(addr);
+    int connection_socket_des = accept(passive_socket, (struct sockaddr *)&addr, &addrlen);
     if (connection_socket_des == -1) {
         perror("Error during accept()");
         exit(-1);
     }
+    
+    addr_from_struct(addr, ip_address, port_number);
     return connection_socket_des;
 }
 

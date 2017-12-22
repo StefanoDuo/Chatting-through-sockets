@@ -31,7 +31,7 @@ create_passive_tcp_socket(const char *ip_address, uint16_t port_number, int back
  * Stops the process execution if something goes wrong
  */
 int
-safe_accept(int passive_socket);
+safe_accept(int passive_socket, char *ip_address, uint16_t *port_number);
 
 
 

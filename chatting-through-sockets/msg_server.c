@@ -33,6 +33,7 @@ main(int argc, char *argv[])
     set_sigpipe_handler();
     
     uint16_t port_number = get_port_number(argv[1]);
+    char ip_address[INET_ADDRSTRLEN];
     int server_socket = create_passive_tcp_socket(NULL, port_number, BACKLOG);
     printf("\nListening for incoming connections on :%" PRIu16 "\n\n", port_number);
 
@@ -49,20 +50,23 @@ main(int argc, char *argv[])
             if (FD_ISSET(i, &read_worker)) {
                 if (i == server_socket) {
                     // New TCP connection request
-                    printf("Accepting a new TCP connection\n");
-                    client_socket = safe_accept(server_socket);
+                    client_socket = safe_accept(server_socket, ip_address, &port_number);
+                    printf("New TCP connection from %s:%" PRIu16 "\n", ip_address, port_number);
                     FD_SET(client_socket, &read_master);
                     max_des = MAX(max_des, client_socket);
                 } else {
                     // An alredy connected client is requesting something
                     bool is_conn_open = serve_request(i);
                     if (!is_conn_open) {
-                        printf("Connection closed by the client\n");
+                    	safe_getpeername(i, ip_address, &port_number);
+                        printf("Connection closed by the client %s:%" PRIu16 "\n",
+                        	   ip_address,
+                        	   port_number);
                         FD_CLR(i, &read_master);
                         safe_close(i);
                     }
                 }
-            	printf("\n");
+            	//printf("\n");
             }
         }
     }
