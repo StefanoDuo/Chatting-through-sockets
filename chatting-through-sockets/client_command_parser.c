@@ -127,10 +127,6 @@ parse_command(char *str, int16_t *command, char *username)
 
 
 
-/* Used to compose a multi-line message during a !send
- *
- * Returns false if the message exceeded max_size
- */
 bool
 parse_message(char *str, uint16_t max_size)
 {

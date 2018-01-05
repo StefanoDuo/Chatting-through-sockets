@@ -201,7 +201,6 @@ execute_send(int server_conn_sd, int udp_sd, const char *username)
 	sprintf(buffer, "%" PRId16 ";%s", RESOLVE_NAME, username);
 	tcp_send(server_conn_sd, buffer);
 	tcp_receive(server_conn_sd, buffer, MAX_BUFFER_SIZE);
-	//printf("Received: %s\n", buffer);
 	
 	// We parse the result_code to decide what to do next
 	token = strtok(buffer, DELIMITER);

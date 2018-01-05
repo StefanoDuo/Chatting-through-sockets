@@ -35,19 +35,23 @@ safe_select(int max_des, fd_set *reader_set);
 
 
 
-// Translates the dotted decimal ip_address and port_number into a sockaddr_in struct
-// stops the process execution if something goes wrong (e.g. ip_address is not a correct
-// dotted decimal ip address)
+// Translates the dotted decimal ip_address and port_number to sockaddr_in struct,
+// stops the process execution if something goes wrong (e.g. ip_address is not a
+// correct dotted decimal ip address)
 struct sockaddr_in
 create_addr_struct(const char *ip_address, uint16_t port_number);
 
 
 
+// Translates the sockaddr_in struct to dotted decimal ip_address and port_number,
+// stops the process execution if something goes wrong
 void
 addr_from_struct(struct sockaddr_in addr, char *ip_address, uint16_t *port_number);
 
 
 
+// Retrieves the connected client's ip address and port number,
+// stops the process execution if something goes wrong
 void
 safe_getpeername(int socket_des, char *ip_address, uint16_t *port_number);
 

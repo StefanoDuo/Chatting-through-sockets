@@ -66,7 +66,6 @@ main(int argc, char *argv[])
                         safe_close(i);
                     }
                 }
-            	//printf("\n");
             }
         }
     }

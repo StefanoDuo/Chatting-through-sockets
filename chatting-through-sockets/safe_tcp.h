@@ -8,7 +8,7 @@
 
 
 
-/* Returns a TCP socket descritor,
+/* Returns a TCP socket descritor
  *
  * Stops the process execution if something goes wrong
  */
@@ -35,6 +35,10 @@ safe_accept(int passive_socket, char *ip_address, uint16_t *port_number);
 
 
 
+/* ip_address and port_number will contain the ip and port of the connecting client
+ *
+ * Stops the process execution if something goes wrong
+ */
 void
 safe_connect(int socket_des, const char *ip_address, uint16_t port_number);
 
@@ -57,6 +61,8 @@ tcp_send(int socket_des, const char *message);
  *
  * Returns false if the connection has been closed by the other host, true otherwise.
  * message will contain a null byte terminated string.
+ *
+ * Stops the process execution if something goes wrong
  */
 bool
 tcp_receive(int socket_des, char *message, uint16_t message_max_length);

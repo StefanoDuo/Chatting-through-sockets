@@ -11,8 +11,10 @@
 
 
 
-// Returns the conversion of str to uint16_t
-// stops process execution if an error occurs during the conversion
+/* Returns the conversion of str to uint16_t
+ *
+ * Stops process execution if an error occurs during the conversion
+ */
 uint16_t
 get_port_number(const char *str);
 

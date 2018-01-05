@@ -130,7 +130,6 @@ get_registered_users_number(void)
         if(is_index_in_use(i))
             ++how_many;
     }
-
     return how_many;
 }
 
@@ -171,7 +170,7 @@ get_ip_and_port_from_username(const char *username, char *ip_address, uint16_t *
 
 
 
-/* Returns true if the registration was successfull (i.e. we found an entry in
+/* Returns true if the registration was successful (i.e. we found an entry in
  * the register), false otherwise
  */
 static bool
@@ -417,8 +416,6 @@ serve_request(int client_socket_des)
     	set_client_offline(client_socket_des);
         goto request_cleanup;
     }
-    
-	// printf("Received --> %s\n", message);
 
     bool success = parse_message(message, &command, username, ip_address, &port_number, offline_message);
     if (!success) {

@@ -7,6 +7,7 @@
 
 
 
+// Serves a pending request from client_socket_des
 bool
 serve_request(int client_socket_des);
 
