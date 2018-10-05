@@ -57,7 +57,7 @@ execute_register(int server_conn_sd, const char *username)
     	return;
     }
     if (strlen(username)+1 > MAX_USERNAME_LENGTH) {
-    	printf("Your username cannot be longer than %" PRIu16 "\n", MAX_USERNAME_LENGTH-1);
+    	printf("Your username cannot be longer than %d\n", MAX_USERNAME_LENGTH-1);
     	return;
     }
     
@@ -67,7 +67,7 @@ execute_register(int server_conn_sd, const char *username)
 		exit(-1);
 	}
     
-    sprintf(message, "%" PRId16 ";%s;%s;%" PRIu16, REGISTER, username, local_ip, local_port);
+    sprintf(message, "%d;%s;%s;%" PRIu16, REGISTER, username, local_ip, local_port);
     tcp_send(server_conn_sd, message);
     
     int16_t result;
@@ -103,7 +103,7 @@ execute_who(int server_conn_sd)
 		exit(-1);
 	}
 	
-    sprintf(message, "%" PRId16, WHO);
+    sprintf(message, "%d", WHO);
     tcp_send(server_conn_sd, message);
     
     tcp_receive(server_conn_sd, message, MAX_BUFFER_SIZE);
@@ -125,7 +125,7 @@ static void
 execute_quit(int server_conn_sd, int udp_sd)
 {
     char message[MAX_MESSAGE_LENGTH];
-    sprintf(message, "%" PRId16, QUIT);
+    sprintf(message, "%d", QUIT);
     tcp_send(server_conn_sd, message);
     safe_close(server_conn_sd);
     safe_close(udp_sd);
@@ -142,7 +142,7 @@ execute_deregister(int server_conn_sd)
 		return;
 	}
     char message[MAX_MESSAGE_LENGTH];
-    sprintf(message, "%" PRId16, DEREGISTER);
+    sprintf(message, "%d", DEREGISTER);
     tcp_send(server_conn_sd, message);
     
     strcpy(local_username, "");
@@ -162,7 +162,7 @@ send_offline(int server_conn_sd, const char *dest_username, const char *message)
 	}
 	
 	sprintf(buffer,
-			"%" PRId16 ";%s;%s (offline msg)>\n%s",
+			"%d;%s;%s (offline msg)>\n%s",
 			SEND,
 			dest_username,
 			local_username,
@@ -198,7 +198,7 @@ execute_send(int server_conn_sd, int udp_sd, const char *username)
     }
 	
 	// First we need to resolve the username
-	sprintf(buffer, "%" PRId16 ";%s", RESOLVE_NAME, username);
+	sprintf(buffer, "%d;%s", RESOLVE_NAME, username);
 	tcp_send(server_conn_sd, buffer);
 	tcp_receive(server_conn_sd, buffer, MAX_BUFFER_SIZE);
 	
@@ -214,7 +214,7 @@ execute_send(int server_conn_sd, int udp_sd, const char *username)
 	// Either if we need to send an offline or direct message we need to compose it
 	bool parsing_completed = parse_message(message, sizeof(message));
 	if (!parsing_completed) {
-		printf("Message too log. Max message size: %" PRId16 "\n", MAX_MESSAGE_LENGTH);
+		printf("Message too log. Max message size: %d\n", MAX_MESSAGE_LENGTH);
 		goto send_cleanup;
 	}
 	
@@ -256,7 +256,8 @@ execute_help(void)
    	printf("!register <username> --> register client as <username>\n");
    	printf("!deregister --> deregister client\n");
    	printf("!who --> shows registered clients\n");
-   	printf("!send <username> --> sends a message to another registered client\n");
+   	printf("!send <username> --> sends a message to another registered client, "
+                "a line containing only '.' ends the message\n");
     printf("!quit --> sets the username offline and exits\n");
 }
 

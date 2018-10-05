@@ -388,7 +388,7 @@ resolve_name(int client_socket_des, const char *username)
     	// Distinct error codes are directly returned by get_ip_and_port_from_username()
     	sprintf(message, "%" PRId16, index);
     else 
-		sprintf(message, "%" PRId16 ";%s;%" PRIu16, SUCCESS, ip_address, port_number);
+		sprintf(message, "%d;%s;%" PRIu16, SUCCESS, ip_address, port_number);
 
     tcp_send(client_socket_des, message);
     free(message);
